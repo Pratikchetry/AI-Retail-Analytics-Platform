@@ -1,0 +1,49 @@
+version: "1.0"
+
+table_name: revenue_growth_analysis
+
+business_purpose: >
+  Tracks month-over-month revenue changes and growth percentages.
+
+primary_key:
+  - month_date
+
+foreign_keys: {}
+
+important_columns:
+
+  month_date:
+    Monthly reporting date
+
+  month_year:
+    Formatted month-year label
+
+  year:
+    Calendar year
+
+  month:
+    Calendar month
+
+  month_name:
+    Month name
+
+  total_revenue:
+    Revenue generated in month
+
+  previous_month_revenue:
+    Revenue generated in previous month
+
+  growth_percent:
+    Month-over-month growth percentage
+
+join_patterns:
+  - Standalone reporting table
+
+business_examples:
+  - Growth trend monitoring
+  - Revenue acceleration analysis
+
+common_questions:
+  - What was MoM growth?
+  - Which month had highest growth?
+  - When did revenue decline?

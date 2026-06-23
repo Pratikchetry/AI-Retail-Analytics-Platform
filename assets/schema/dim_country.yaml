@@ -1,0 +1,27 @@
+version: "1.0"
+
+table_name: dim_country
+
+business_purpose: >
+  Country dimension used for geographical analysis.
+
+primary_key:
+  - country_key
+
+foreign_keys: {}
+
+important_columns:
+  country_key: Surrogate country key
+  country_name: Country name
+
+join_patterns:
+  - fact_sales.country_key = dim_country.country_key
+
+business_examples:
+  - Revenue by country
+  - Customer distribution by country
+
+common_questions:
+  - Which country generated highest revenue?
+  - Revenue contribution by country?
+  - Country sales ranking?

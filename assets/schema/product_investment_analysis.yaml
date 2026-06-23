@@ -1,0 +1,29 @@
+version: "1.0"
+
+table_name: product_investment_analysis
+
+business_purpose: >
+  Product investment recommendation layer based on performance.
+
+primary_key:
+  - description
+
+foreign_keys: {}
+
+important_columns:
+  description: Product name
+  total_revenue: Revenue generated
+  total_quantity: Units sold
+  total_orders: Order count
+  investment_strategy: Recommendation label
+
+join_patterns:
+  - Standalone reporting table
+
+business_examples:
+  - Product investment decisions
+  - Portfolio optimization
+
+common_questions:
+  - Which products deserve investment?
+  - What products should be promoted?

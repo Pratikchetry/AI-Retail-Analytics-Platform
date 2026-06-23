@@ -1,0 +1,29 @@
+version: "1.0"
+
+table_name: dim_customer
+
+business_purpose: >
+  Customer dimension containing customer segmentation and profile data.
+
+primary_key:
+  - customer_key
+
+foreign_keys: {}
+
+important_columns:
+  customer_key: Customer surrogate key
+  customer_id: Business customer identifier
+  customer_segment: Pre-computed RFM segment
+
+join_patterns:
+  - fact_sales.customer_key = dim_customer.customer_key
+
+business_examples:
+  - Revenue by segment
+  - Champions analysis
+  - Customer retention
+
+common_questions:
+  - Which segment generates most revenue?
+  - How many Champions exist?
+  - Revenue by customer segment?

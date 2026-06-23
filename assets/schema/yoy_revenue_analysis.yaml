@@ -1,0 +1,40 @@
+version: "1.0"
+
+table_name: yoy_revenue_analysis
+
+business_purpose: >
+  Year-over-year revenue comparison between reporting periods.
+
+primary_key:
+  - month
+
+foreign_keys: {}
+
+important_columns:
+
+  month:
+    Calendar month
+
+  month_name:
+    Month label
+
+  revenue_2010:
+    Revenue for 2010
+
+  revenue_2011:
+    Revenue for 2011
+
+  yoy_growth_percent:
+    Year-over-year growth percentage
+
+join_patterns:
+  - Standalone comparison table
+
+business_examples:
+  - YoY performance reporting
+  - Historical growth comparison
+
+common_questions:
+  - What was YoY growth?
+  - Which month improved most?
+  - Which month declined YoY?

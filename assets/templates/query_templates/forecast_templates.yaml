@@ -1,0 +1,36 @@
+version: "1.0"
+
+domain: Forecast
+
+templates:
+
+  revenue_forecast:
+
+    preferred_table: revenue_forecast
+
+    sql_template: |
+      SELECT
+          order_date,
+          forecast_revenue
+      FROM revenue_forecast
+      ORDER BY order_date
+
+  forecast_accuracy:
+
+    preferred_table: revenue_forecast
+
+    sql_template: |
+      SELECT
+          mae,
+          rmse
+      FROM revenue_forecast
+      LIMIT 1
+
+  feature_importance:
+
+    preferred_table: feature_daily_model_input
+
+    sql_template: |
+      SELECT *
+      FROM feature_daily_model_input
+      LIMIT 100

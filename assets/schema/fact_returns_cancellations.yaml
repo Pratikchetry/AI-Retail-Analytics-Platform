@@ -1,0 +1,41 @@
+version: "1.0"
+
+table_name: fact_returns_cancellations
+
+business_purpose: >
+  Stores returned and cancelled orders.
+  Quantities are negative and represent revenue reversal activity.
+
+primary_key:
+  - return_id
+
+foreign_keys: {}
+
+important_columns:
+  return_id: Unique return transaction identifier
+  invoice: Invoice number
+  order_date: Return date
+  stockcode: Product stock code
+  description: Product description
+  customer_id: Customer identifier
+  country: Customer country
+  quantity: Negative quantity returned
+  price: Returned value
+
+join_patterns:
+  - Used for net revenue calculations
+  - Normally excluded from gross revenue reporting
+
+business_examples:
+  - Return analysis
+  - Cancellation analysis
+  - Net revenue calculations
+
+common_questions:
+  - What products are returned most often?
+  - What is total return value?
+  - What is net revenue after returns?
+
+business_rules:
+  - Referenced by BR003
+  - Quantities are negative

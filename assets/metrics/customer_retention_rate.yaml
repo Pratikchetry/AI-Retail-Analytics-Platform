@@ -1,0 +1,15 @@
+version: "1.0"
+
+metric_name: Customer Retention Rate
+
+business_definition: >
+  Percentage of customers retained.
+
+formula: >
+  retained_customers / total_customers * 100
+
+preferred_tables:
+  - customer_retention_actions
+
+preferred_columns:
+  - customer_segment

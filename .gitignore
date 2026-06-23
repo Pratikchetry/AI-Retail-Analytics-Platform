@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Environment variables
+.env
+
+# ChromaDB
+chroma_store/
+chroma_db/
+vector_store/
+
+# Models
+models/
+weights/
+
+# Mac
+.DS_Store
+
+# Logs
+*.log
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Databases
+*.sqlite3
+*.db
+
+data/staging/*.csv

@@ -1,0 +1,27 @@
+version: "1.0"
+
+table_name: product_revenue_contribution
+
+business_purpose: >
+  Product revenue share contribution analysis.
+
+primary_key:
+  - description
+
+foreign_keys: {}
+
+important_columns:
+  description: Product name
+  total_revenue: Product revenue
+  revenue_contribution_pct: Percentage contribution
+
+join_patterns:
+  - Standalone reporting table
+
+business_examples:
+  - Pareto analysis
+  - Revenue concentration analysis
+
+common_questions:
+  - Which products contribute most revenue?
+  - Top revenue contributors?

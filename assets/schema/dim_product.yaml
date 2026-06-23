@@ -1,0 +1,29 @@
+version: "1.0"
+
+table_name: dim_product
+
+business_purpose: >
+  Product dimension used for product performance analysis.
+
+primary_key:
+  - product_key
+
+foreign_keys: {}
+
+important_columns:
+  product_key: Product surrogate key
+  stockcode: Product code
+  description: Product description
+
+join_patterns:
+  - fact_sales.product_key = dim_product.product_key
+
+business_examples:
+  - Product revenue contribution
+  - Product quantity sold
+  - Product profitability
+
+common_questions:
+  - Top revenue products?
+  - Best selling products?
+  - Product contribution percentage?

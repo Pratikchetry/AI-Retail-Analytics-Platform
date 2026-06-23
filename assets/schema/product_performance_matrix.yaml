@@ -1,0 +1,28 @@
+version: "1.0"
+
+table_name: product_performance_matrix
+
+business_purpose: >
+  Unified product performance matrix combining revenue, quantity and order activity.
+
+primary_key:
+  - description
+
+foreign_keys: {}
+
+important_columns:
+  description: Product name
+  total_revenue: Revenue generated
+  total_quantity: Quantity sold
+  total_orders: Number of orders
+
+join_patterns:
+  - Standalone reporting table
+
+business_examples:
+  - Product performance comparison
+  - Product ranking matrix
+
+common_questions:
+  - Best performing products?
+  - Which products drive business growth?

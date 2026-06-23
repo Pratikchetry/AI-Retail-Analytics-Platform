@@ -1,0 +1,15 @@
+version: "1.0"
+
+metric_name: Average Monetary Value
+
+business_definition: >
+  Average customer spending value.
+
+formula: >
+  total_revenue / customer_count
+
+preferred_tables:
+  - customer_segment_profile
+
+preferred_columns:
+  - avg_monetary

@@ -1,0 +1,41 @@
+version: "1.0"
+
+table_name: revenue_seasonality
+
+business_purpose: >
+  Captures seasonal revenue behavior across months.
+
+primary_key:
+  - year
+  - month
+
+foreign_keys: {}
+
+important_columns:
+
+  year:
+    Calendar year
+
+  month:
+    Calendar month
+
+  month_name:
+    Month name
+
+  total_revenue:
+    Revenue generated
+
+  total_orders:
+    Orders generated
+
+join_patterns:
+  - Standalone seasonal reporting table
+
+business_examples:
+  - Seasonal demand analysis
+  - Peak month detection
+
+common_questions:
+  - Which month performs best?
+  - What are seasonal trends?
+  - Is December stronger than January?

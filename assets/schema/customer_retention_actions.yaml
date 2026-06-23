@@ -1,0 +1,28 @@
+version: "1.0"
+
+table_name: customer_retention_actions
+
+business_purpose: >
+  Recommended retention actions mapped to customer segments.
+
+primary_key:
+  - customer_segment
+
+foreign_keys: {}
+
+important_columns:
+  customer_segment: Segment label
+  recommended_action: Suggested business action
+
+join_patterns:
+  - customer_segment_profile.customer_segment = customer_retention_actions.customer_segment
+
+business_examples:
+  - Retention playbooks
+  - Marketing recommendations
+  - Customer recovery strategies
+
+common_questions:
+  - What actions should we take for dormant customers?
+  - Recommended strategy by segment?
+  - Retention plan for at-risk customers?

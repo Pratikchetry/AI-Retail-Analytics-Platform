@@ -1,0 +1,21 @@
+version: "1.0"
+
+template_name: variance_commentary
+
+template: |
+  Variance Commentary
+
+  Current Value:
+  {current_value}
+
+  Previous Value:
+  {previous_value}
+
+  Variance:
+  {variance}
+
+  Variance Percentage:
+  {variance_pct}
+
+  Commentary:
+  {commentary}

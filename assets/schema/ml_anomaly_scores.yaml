@@ -1,0 +1,31 @@
+version: 1.0
+
+table_name: ml_anomaly_scores
+
+business_purpose: Daily anomaly detection output generated from retail revenue monitoring. Used to identify unusual revenue behavior across countries and dates.
+
+primary_key:
+  - date
+  - country_name
+
+foreign_keys: {}
+
+important_columns:
+  date: Date of anomaly observation
+  country_name: Country being monitored
+  daily_revenue: Total revenue recorded for the day
+  anomaly_score: Isolation Forest anomaly score
+
+join_patterns:
+  - No direct join to fact_sales
+  - Used as an analytical monitoring table
+
+business_examples:
+  - Detect abnormal revenue days
+  - Identify unusual country-level revenue behavior
+  - Monitor revenue anomalies over time
+
+common_questions:
+  - Which dates have the highest anomaly scores?
+  - Which countries show unusual revenue activity?
+  - What are the most significant revenue anomalies?

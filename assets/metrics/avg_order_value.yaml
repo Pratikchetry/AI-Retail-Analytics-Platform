@@ -1,0 +1,30 @@
+version: "1.0"
+
+metric_name: Average Order Value
+
+business_definition: >
+  Average revenue generated per order.
+
+formula: >
+  SUM(revenue) / COUNT(DISTINCT invoice)
+
+preferred_tables:
+  - fact_sales
+
+preferred_columns:
+  - revenue
+  - invoice
+
+business_interpretation: >
+  Measures customer spending efficiency.
+
+common_questions:
+  - What is average order value?
+  - Which country has highest AOV?
+  - How has AOV changed over time?
+
+sql_pattern: >
+  SELECT
+      SUM(revenue) /
+      COUNT(DISTINCT invoice) AS avg_order_value
+  FROM fact_sales

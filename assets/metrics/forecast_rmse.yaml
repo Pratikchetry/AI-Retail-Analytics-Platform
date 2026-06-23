@@ -1,0 +1,15 @@
+version: "1.0"
+
+metric_name: Forecast RMSE
+
+business_definition: >
+  Root Mean Squared Error of forecasting model.
+
+formula: >
+  SQRT(AVG(error^2))
+
+preferred_tables:
+  - revenue_forecast
+
+preferred_columns:
+  - rmse

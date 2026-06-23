@@ -1,0 +1,25 @@
+version: "1.0"
+
+template_name: board_summary
+
+template: |
+  Executive Summary
+
+  Total Revenue: {total_revenue}
+
+  Average Monthly Revenue: {avg_monthly_revenue}
+
+  Best Month:
+  {best_month}
+
+  Best Month Revenue:
+  {best_month_revenue}
+
+  Worst Month:
+  {worst_month}
+
+  Worst Month Revenue:
+  {worst_month_revenue}
+
+  Year-over-Year Growth:
+  {yoy_growth}

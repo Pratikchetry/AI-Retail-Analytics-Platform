@@ -1,0 +1,42 @@
+version: "1.0"
+
+table_name: feature_daily_model_input
+
+business_purpose: >
+  Machine learning feature table used as input to forecasting models.
+
+primary_key:
+  - order_date
+
+foreign_keys: {}
+
+important_columns:
+  order_date: Reporting date
+  daily_revenue: Revenue target
+  daily_orders: Daily orders
+  daily_active_customers: Active customers
+  revenue_lag_1: Revenue previous day
+  revenue_lag_7: Revenue previous week
+  revenue_lag_14: Revenue 14-day lag
+  revenue_lag_28: Revenue 28-day lag
+  orders_lag_1: Orders previous day
+  orders_lag_7: Orders previous week
+  rolling_mean_7: 7-day moving average
+  rolling_mean_14: 14-day moving average
+  rolling_std_7: 7-day volatility
+  rolling_std_14: 14-day volatility
+  revenue_growth_7d: Weekly revenue growth
+  orders_growth_7d: Weekly order growth
+
+join_patterns:
+  - feature_daily_model_input.order_date = feature_daily_enriched.order_date
+
+business_examples:
+  - Forecast model training
+  - Feature importance analysis
+  - Revenue prediction
+
+common_questions:
+  - Which features drive forecasts?
+  - What lag features are used?
+  - How is revenue predicted?

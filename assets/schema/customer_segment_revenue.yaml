@@ -1,0 +1,30 @@
+version: "1.0"
+
+table_name: customer_segment_revenue
+
+business_purpose: >
+  Revenue contribution table for customer segments.
+
+primary_key:
+  - customer_segment
+
+foreign_keys: {}
+
+important_columns:
+  customer_segment: Segment label
+  customer_count: Number of customers
+  total_revenue: Revenue generated
+  avg_order_revenue: Average revenue per order
+
+join_patterns:
+  - Standalone reporting table
+
+business_examples:
+  - Revenue by customer segment
+  - Segment profitability analysis
+  - Customer concentration analysis
+
+common_questions:
+  - Which segment generates the most revenue?
+  - What is revenue by segment?
+  - Which segment has highest average order value?

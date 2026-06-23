@@ -1,0 +1,32 @@
+version: "1.0"
+
+table_name: product_revenue_analysis
+
+business_purpose: >
+  Revenue performance table for products ranked by total revenue.
+
+primary_key:
+  - product_key
+
+foreign_keys: {}
+
+important_columns:
+  product_key: Product identifier
+  stockcode: Product stock code
+  description: Product description
+  total_revenue: Revenue generated
+  total_quantity: Quantity sold
+  total_orders: Number of orders
+
+join_patterns:
+  - Standalone reporting table
+
+business_examples:
+  - Top revenue products
+  - Product revenue ranking
+  - Revenue contribution analysis
+
+common_questions:
+  - Which products generated the most revenue?
+  - Top 10 revenue products?
+  - Product revenue ranking?

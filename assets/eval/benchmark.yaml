@@ -1,0 +1,24 @@
+version: "1.0"
+
+evaluation_suite:
+
+  retrieval:
+    target_recall: 0.90
+    target_precision: 0.85
+
+  sql_generation:
+    target_accuracy: 0.90
+
+  execution:
+    target_success_rate: 0.95
+
+  answer_quality:
+    target_groundedness: 0.95
+
+sample_questions:
+
+  - What was total revenue in 2011?
+  - Which product generated highest revenue?
+  - Which segment generated most revenue?
+  - Show anomaly spikes.
+  - Forecast next month revenue.

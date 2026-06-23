@@ -1,0 +1,26 @@
+version: "1.0"
+
+metric_name: Anomaly Rate
+
+business_definition: >
+  Percentage of observations flagged as anomalies.
+
+formula: >
+  COUNT(anomalies) / COUNT(total observations) * 100
+
+preferred_tables:
+  - ml_anomaly_scores
+
+preferred_columns:
+  - anomaly_score
+
+business_interpretation: >
+  Measures abnormal business activity frequency.
+
+common_questions:
+  - How many anomalies occurred?
+  - What is anomaly rate?
+
+sql_pattern: >
+  SELECT COUNT(*) AS anomaly_count
+  FROM ml_anomaly_scores

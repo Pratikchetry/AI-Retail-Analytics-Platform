@@ -1,0 +1,42 @@
+version: "1.0"
+
+table_name: fact_accounting_adjustments
+
+business_purpose: >
+  Stores accounting correction transactions and post-sale financial adjustments.
+  These records should not be included in standard revenue analysis unless the
+  user explicitly requests accounting adjustments, corrections, or audit analysis.
+
+primary_key:
+  - adjustment_id
+
+foreign_keys: {}
+
+important_columns:
+  adjustment_id: Unique adjustment transaction identifier
+  invoice: Invoice number associated with adjustment
+  order_date: Adjustment posting date
+  stockcode: Product stock code
+  description: Product description
+  customer_id: Customer identifier
+  country: Customer country
+  quantity: Adjustment quantity
+  price: Adjustment value
+
+join_patterns:
+  - Do not join with fact_sales in standard revenue analysis
+  - Only use when user requests accounting corrections
+
+business_examples:
+  - Revenue correction audit
+  - Accounting reconciliation
+  - Financial adjustment review
+
+common_questions:
+  - What accounting adjustments were recorded?
+  - Which invoices were adjusted?
+  - What correction value was posted?
+
+business_rules:
+  - Excluded from normal revenue calculations
+  - Referenced by BR001

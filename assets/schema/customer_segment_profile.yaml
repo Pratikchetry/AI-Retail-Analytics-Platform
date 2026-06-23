@@ -1,0 +1,32 @@
+version: "1.0"
+
+table_name: customer_segment_profile
+
+business_purpose: >
+  Customer segmentation profile table containing RFM statistics
+  for each customer segment.
+
+primary_key:
+  - customer_segment
+
+foreign_keys: {}
+
+important_columns:
+  customer_segment: Segment label
+  avg_recency: Average recency score
+  avg_frequency: Average frequency score
+  avg_monetary: Average monetary score
+  customer_count: Number of customers in segment
+
+join_patterns:
+  - Standalone reporting table
+
+business_examples:
+  - Customer segment profiling
+  - Segment behavior comparison
+  - RFM analysis
+
+common_questions:
+  - Which segment has highest monetary value?
+  - Which segment is most active?
+  - What are customer segment characteristics?

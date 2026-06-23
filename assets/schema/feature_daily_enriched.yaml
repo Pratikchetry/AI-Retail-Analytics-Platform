@@ -1,0 +1,42 @@
+version: "1.0"
+
+table_name: feature_daily_enriched
+
+business_purpose: >
+  Daily business activity feature table used for anomaly monitoring,
+  operational intelligence, and exploratory analytics.
+
+primary_key:
+  - order_date
+
+foreign_keys: {}
+
+important_columns:
+  order_date: Reporting date
+  daily_revenue: Daily revenue
+  daily_orders: Daily order count
+  daily_active_customers: Active customers
+  avg_transaction_value: Average transaction value
+  largest_single_transaction: Largest transaction
+  large_order_flag: Large order indicator
+  day_of_week: Day number
+  month: Calendar month
+  week_of_year: Week number
+  is_weekend: Weekend flag
+  is_peak_season: Peak season indicator
+  holiday_name: Holiday label
+  is_public_holiday: Public holiday flag
+  holiday_peak_period: Holiday peak flag
+
+join_patterns:
+  - feature_daily_enriched.order_date = feature_daily_model_input.order_date
+
+business_examples:
+  - Daily revenue analysis
+  - Operational monitoring
+  - Holiday impact analysis
+
+common_questions:
+  - What happened on a specific day?
+  - Which days had unusual revenue?
+  - Holiday revenue impact?

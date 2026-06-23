@@ -1,0 +1,55 @@
+version: "1.0"
+domain: Anomaly
+model: Isolation Forest
+rules:
+  - id: AR001
+    name: anomaly_score_direction
+    rule: >
+      In ml_anomaly_scores the anomaly_score column follows Isolation Forest
+      convention. Lower scores indicate more anomalous observations.
+      A score near -1 is highly anomalous. A score near 0 is normal.
+    sql_implication: >
+      ORDER BY anomaly_score ASC to find most anomalous
+      ORDER BY anomaly_score DESC to find most normal
+    violation_example: >
+      ORDER BY anomaly_score DESC LIMIT 1 -- this returns the LEAST anomalous
+    correct_example: >
+      ORDER BY anomaly_score ASC LIMIT 1 -- this returns the MOST anomalous
+
+  - id: AR002
+    name: anomaly_direction_values
+    rule: >
+      The anomaly_direction column contains exactly two values: spike or drop.
+      Spike means revenue was unusually high. Drop means revenue was unusually low.
+      Never filter for any other value.
+    sql_implication: >
+      WHERE anomaly_direction = 'spike'
+      WHERE anomaly_direction = 'drop'
+    violation_example: >
+      WHERE anomaly_direction = 'increase'
+    correct_example: >
+      WHERE anomaly_direction = 'spike'
+
+  - id: AR003
+    name: is_anomaly_boolean
+    rule: >
+      is_anomaly is a boolean column. Use TRUE or FALSE not 1 or 0.
+      Always filter on this column first before using anomaly_score
+      for ranking within anomalies.
+    sql_implication: >
+      WHERE is_anomaly = TRUE
+    violation_example: >
+      WHERE is_anomaly = 1
+    correct_example: >
+      WHERE is_anomaly = TRUE ORDER BY anomaly_score ASC
+
+  - id: AR004
+    name: anomaly_thresholds
+    rule: >
+      Expected normal ranges for key metrics.
+      Daily revenue normal range: within 3x of 30-day rolling average.
+      Week-over-week customer count should not drop more than 5 percent.
+      Gross margin below 40 percent is anomalous for this business.
+      Flag answers that report values outside these ranges as potentially anomalous.
+    sql_implication: >
+      Use these as sanity checks in the critic node answer validation

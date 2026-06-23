@@ -1,0 +1,31 @@
+version: "1.0"
+
+domain: Executive
+
+templates:
+
+  board_summary:
+
+    preferred_table: revenue_executive_summary
+
+    sql_template: |
+      SELECT *
+      FROM revenue_executive_summary
+
+  growth_dashboard:
+
+    preferred_table: revenue_growth_analysis
+
+    sql_template: |
+      SELECT
+          month_name,
+          growth_percent
+      FROM revenue_growth_analysis
+
+  product_dashboard:
+
+    preferred_table: product_performance_matrix
+
+    sql_template: |
+      SELECT *
+      FROM product_performance_matrix

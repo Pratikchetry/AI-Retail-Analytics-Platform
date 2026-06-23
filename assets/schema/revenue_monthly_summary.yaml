@@ -1,0 +1,48 @@
+version: "1.0"
+
+table_name: revenue_monthly_summary
+
+business_purpose: >
+  Monthly aggregated revenue reporting table used for trend analysis,
+  executive reporting, and forecasting.
+
+primary_key:
+  - month_date
+
+foreign_keys: {}
+
+important_columns:
+
+  year:
+    Calendar year
+
+  month:
+    Calendar month number
+
+  month_date:
+    First day of the month
+
+  month_name:
+    Month name
+
+  total_revenue:
+    Total monthly revenue
+
+  avg_daily_revenue:
+    Average revenue per day
+
+  total_orders:
+    Number of orders in the month
+
+join_patterns:
+  - Standalone reporting table
+
+business_examples:
+  - Monthly revenue trend
+  - Executive dashboard reporting
+  - Revenue forecasting baseline
+
+common_questions:
+  - What was revenue in March 2011?
+  - Which month generated the highest revenue?
+  - What is average monthly revenue?

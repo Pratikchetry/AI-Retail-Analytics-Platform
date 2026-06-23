@@ -1,0 +1,16 @@
+{
+  "model": "XGBoost",
+  "holdout_start": "2011-09-11",
+  "holdout_end": "2011-12-09",
+  "holdout_days": 90,
+  "mae": 11805.29,
+  "rmse": 21471.84,
+  "baseline_mae": 15121.75,
+  "baseline_rmse": 24567.28,
+  "mae_vs_baseline_pct": 21.9,
+  "rmse_vs_baseline_pct": 12.6,
+  "primary_target": "merchandise_revenue",
+  "feature_count": 17,
+  "top_feature": "orders_rolling_mean_7",
+  "notes": "The model captures weekly seasonality and mid-range revenue patterns well, but underpredicts rare extreme spike days such as the December 9 peak. These events are not forecastable from lag and rolling features alone."
+}

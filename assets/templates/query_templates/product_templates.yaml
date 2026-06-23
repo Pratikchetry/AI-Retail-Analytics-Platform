@@ -1,0 +1,46 @@
+version: "1.0"
+
+domain: Product
+
+templates:
+
+  top_revenue_products:
+    preferred_table: product_revenue_analysis
+
+    sql_template: |
+      SELECT
+          description,
+          total_revenue
+      FROM product_revenue_analysis
+      ORDER BY total_revenue DESC
+      LIMIT 10
+
+  top_quantity_products:
+    preferred_table: product_quantity_analysis
+
+    sql_template: |
+      SELECT
+          description,
+          total_quantity
+      FROM product_quantity_analysis
+      ORDER BY total_quantity DESC
+      LIMIT 10
+
+  revenue_contribution:
+    preferred_table: product_revenue_contribution
+
+    sql_template: |
+      SELECT
+          description,
+          revenue_contribution_pct
+      FROM product_revenue_contribution
+      ORDER BY revenue_contribution_pct DESC
+
+  investment_strategy:
+    preferred_table: product_investment_analysis
+
+    sql_template: |
+      SELECT
+          description,
+          investment_strategy
+      FROM product_investment_analysis

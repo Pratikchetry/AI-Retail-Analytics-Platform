@@ -1,0 +1,52 @@
+version: "1.0"
+
+table_name: revenue_forecast
+
+business_purpose: >
+  Stores forecasted revenue values and model evaluation metrics.
+
+primary_key:
+  - order_date
+
+foreign_keys: {}
+
+important_columns:
+
+  order_date:
+    Forecast date
+
+  actual_revenue:
+    Actual observed revenue
+
+  forecast_revenue:
+    Predicted revenue
+
+  forecast_error:
+    Forecast minus actual
+
+  absolute_error:
+    Absolute forecast deviation
+
+  model_name:
+    Forecast model identifier
+
+  mae:
+    Mean Absolute Error
+
+  rmse:
+    Root Mean Squared Error
+
+  created_at:
+    Forecast generation timestamp
+
+join_patterns:
+  - Standalone forecast output table
+
+business_examples:
+  - Revenue forecasting
+  - Forecast accuracy monitoring
+
+common_questions:
+  - What revenue is expected next month?
+  - How accurate is the model?
+  - What is MAE and RMSE?

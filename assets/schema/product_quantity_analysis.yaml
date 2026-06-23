@@ -1,0 +1,30 @@
+version: "1.0"
+
+table_name: product_quantity_analysis
+
+business_purpose: >
+  Product sales volume analysis table.
+
+primary_key:
+  - product_key
+
+foreign_keys: {}
+
+important_columns:
+  product_key: Product identifier
+  stockcode: Product stock code
+  description: Product description
+  total_quantity: Units sold
+  total_revenue: Revenue generated
+  total_orders: Orders containing product
+
+join_patterns:
+  - Standalone reporting table
+
+business_examples:
+  - Best selling products
+  - High volume products
+
+common_questions:
+  - Which products sold the most units?
+  - Highest quantity products?

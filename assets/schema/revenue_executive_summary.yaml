@@ -1,0 +1,46 @@
+version: "1.0"
+
+table_name: revenue_executive_summary
+
+business_purpose: >
+  Executive KPI summary table used for board-level reporting.
+
+primary_key:
+  - total_revenue
+
+foreign_keys: {}
+
+important_columns:
+
+  total_revenue:
+    Overall revenue
+
+  avg_monthly_revenue:
+    Average monthly revenue
+
+  best_month:
+    Highest performing month
+
+  worst_month:
+    Lowest performing month
+
+  best_month_revenue:
+    Revenue in best month
+
+  worst_month_revenue:
+    Revenue in worst month
+
+  yoy_growth:
+    Overall YoY growth
+
+join_patterns:
+  - Executive reporting table
+
+business_examples:
+  - CEO dashboard
+  - Board reporting
+
+common_questions:
+  - What is total company revenue?
+  - What is YoY growth?
+  - Which month performed best?

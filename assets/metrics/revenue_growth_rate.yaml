@@ -1,0 +1,29 @@
+version: "1.0"
+
+metric_name: Revenue Growth Rate
+
+business_definition: >
+  Percentage increase or decrease in revenue compared with previous period.
+
+formula: >
+  ((current_revenue - previous_revenue) / previous_revenue) * 100
+
+preferred_tables:
+  - revenue_growth_analysis
+
+preferred_columns:
+  - total_revenue
+  - previous_month_revenue
+  - growth_percent
+
+business_interpretation: >
+  Indicates business expansion or contraction.
+
+common_questions:
+  - What is month-over-month growth?
+  - Which month grew fastest?
+  - Which month declined?
+
+sql_pattern: >
+  SELECT month_name, growth_percent
+  FROM revenue_growth_analysis

@@ -1,0 +1,47 @@
+version: "1.0"
+
+domain: Revenue
+
+templates:
+
+  monthly_revenue:
+    question_pattern: "monthly revenue"
+    preferred_table: revenue_monthly_summary
+
+    sql_template: |
+      SELECT
+          month_name,
+          total_revenue
+      FROM revenue_monthly_summary
+      ORDER BY month_date
+
+  revenue_growth:
+    question_pattern: "revenue growth"
+    preferred_table: revenue_growth_analysis
+
+    sql_template: |
+      SELECT
+          month_name,
+          growth_percent
+      FROM revenue_growth_analysis
+      ORDER BY month_date
+
+  yoy_growth:
+    question_pattern: "year over year growth"
+    preferred_table: yoy_revenue_analysis
+
+    sql_template: |
+      SELECT
+          month_name,
+          yoy_growth_percent
+      FROM yoy_revenue_analysis
+      ORDER BY month
+
+  executive_revenue:
+    question_pattern: "revenue summary"
+
+    preferred_table: revenue_executive_summary
+
+    sql_template: |
+      SELECT *
+      FROM revenue_executive_summary

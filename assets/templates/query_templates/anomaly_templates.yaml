@@ -1,0 +1,39 @@
+version: "1.0"
+
+domain: Anomaly
+
+templates:
+
+  highest_anomalies:
+
+    preferred_table: ml_anomaly_scores
+
+    sql_template: |
+      SELECT
+          date,
+          country_name,
+          daily_revenue,
+          anomaly_score
+      FROM ml_anomaly_scores
+      ORDER BY anomaly_score ASC
+      LIMIT 10
+
+  anomaly_spikes:
+
+    preferred_table: ml_anomaly_scores
+
+    sql_template: |
+      SELECT *
+      FROM ml_anomaly_scores
+      WHERE anomaly_direction='spike'
+      ORDER BY anomaly_score ASC
+
+  anomaly_drops:
+
+    preferred_table: ml_anomaly_scores
+
+    sql_template: |
+      SELECT *
+      FROM ml_anomaly_scores
+      WHERE anomaly_direction='drop'
+      ORDER BY anomaly_score ASC

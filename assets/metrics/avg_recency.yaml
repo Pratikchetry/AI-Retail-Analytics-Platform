@@ -1,0 +1,15 @@
+version: "1.0"
+
+metric_name: Average Recency
+
+business_definition: >
+  Average days since last purchase.
+
+formula: >
+  AVG(days_since_last_purchase)
+
+preferred_tables:
+  - customer_segment_profile
+
+preferred_columns:
+  - avg_recency

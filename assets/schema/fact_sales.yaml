@@ -1,0 +1,45 @@
+version: "1.0"
+
+table_name: fact_sales
+
+business_purpose: >
+  Central transactional fact table containing every completed sale.
+  This is the primary source of revenue, quantity sold, customer activity,
+  and product performance analysis.
+
+primary_key:
+  - sales_id
+
+foreign_keys:
+  country_key: dim_country.country_key
+  customer_key: dim_customer.customer_key
+  product_key: dim_product.product_key
+
+important_columns:
+  sales_id: Unique transaction identifier
+  invoice: Invoice number
+  order_date: Date of transaction
+  product_key: Product reference
+  customer_key: Customer reference
+  country_key: Country reference
+  quantity: Units sold
+  price: Unit selling price
+  revenue: Pre-computed transaction revenue
+
+join_patterns:
+  - fact_sales.country_key = dim_country.country_key
+  - fact_sales.customer_key = dim_customer.customer_key
+  - fact_sales.product_key = dim_product.product_key
+  - fact_sales.order_date = dim_date.date
+
+business_examples:
+  - Total revenue by country
+  - Average order value
+  - Product sales performance
+  - Customer purchasing behavior
+
+common_questions:
+  - Which country generated the most revenue?
+  - What was total revenue in 2011?
+  - Which products sold best?
+  - What is average order value?

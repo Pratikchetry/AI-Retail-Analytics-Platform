@@ -1,0 +1,31 @@
+version: "1.0"
+
+table_name: dim_date
+
+business_purpose: >
+  Calendar dimension used for time intelligence and reporting.
+
+primary_key:
+  - date
+
+foreign_keys: {}
+
+important_columns:
+  date: Calendar date
+  year: Calendar year
+  quarter: Fiscal quarter
+  month: Month number
+  month_name: Month name
+
+join_patterns:
+  - fact_sales.order_date = dim_date.date
+
+business_examples:
+  - Monthly revenue
+  - Quarterly growth
+  - Year-over-year analysis
+
+common_questions:
+  - Revenue in Q3 2011?
+  - Monthly sales trend?
+  - Year-over-year growth?

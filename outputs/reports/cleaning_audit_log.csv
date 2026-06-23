@@ -1,0 +1,5 @@
+step,rows_before,rows_after,rows_removed,reason
+remove_exact_duplicates,1067371,1033036,34335,Exact duplicate rows across all raw columns
+separate_accounting_adjustments,1033036,1033031,5,Negative price rows treated as accounting adjustments
+separate_returns_cancellations,1033036,1010539,22497,Negative quantity or C-prefixed invoice rows treated as returns/cancellations
+create_sales_main,1010535,1007914,2621,Removed zero-price rows and rows with missing description from positive sales

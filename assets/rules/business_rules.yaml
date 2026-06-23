@@ -1,0 +1,119 @@
+version: "1.0"
+applies_to: all_domains
+rules:
+  - id: BR001
+    name: exclude_accounting_adjustments
+    domain: all
+    severity: critical
+    rule: >
+      Never include fact_accounting_adjustments in any query unless the
+      user explicitly mentions accounting adjustments or corrections.
+    sql_implication: >
+      Do not JOIN or reference fact_accounting_adjustments
+    violation_example: >
+      SELECT * FROM fact_sales JOIN fact_accounting_adjustments
+    correct_example: >
+      SELECT revenue FROM fact_sales
+
+  - id: BR002
+    name: use_precomputed_revenue
+    domain: all
+    severity: critical
+    rule: >
+      Always use the precomputed revenue column from fact_sales directly.
+      Never calculate revenue as quantity * price. The revenue column
+      accounts for discounts applied at time of sale that quantity * price
+      does not capture.
+    sql_implication: >
+      SELECT fs.revenue FROM fact_sales fs
+      Never: SELECT fs.quantity * fs.price
+    violation_example: >
+      SELECT SUM(quantity * price) AS revenue FROM fact_sales
+    correct_example: >
+      SELECT SUM(revenue) AS total_revenue FROM fact_sales
+
+  - id: BR003
+    name: returns_are_negative
+    domain: Revenue
+    severity: high
+    rule: >
+      fact_returns_cancellations contains negative quantity values.
+      To compute net revenue subtract returns from gross sales.
+      Do not include returns in default revenue queries unless the
+      user explicitly asks about returns or net revenue.
+    sql_implication: >
+      Net revenue = SUM(fact_sales.revenue) - ABS(SUM(fact_returns_cancellations.revenue))
+    violation_example: >
+      SELECT SUM(revenue) FROM fact_returns_cancellations
+    correct_example: >
+      SELECT SUM(fs.revenue) AS gross_revenue FROM fact_sales fs
+
+  - id: BR004
+    name: fixed_rfm_segments
+    domain: Customer
+    severity: critical
+    rule: >
+      The 5 RFM customer segments are fixed and pre-computed in dim_customer.
+      Never invent new segment names. Never re-derive segments from RFM scores.
+      Always filter using exactly these values: Champions, Loyal Customers,
+      Potential Loyalists, At Risk, Lost Customers.
+    sql_implication: >
+      WHERE customer_segment IN ('Champions', 'Loyal Customers',
+      'Potential Loyalists', 'At Risk', 'Lost Customers')
+    violation_example: >
+      WHERE customer_segment = 'High Value'
+    correct_example: >
+      WHERE customer_segment = 'Champions'
+
+  - id: BR005
+    name: currency_is_gbp
+    domain: all
+    severity: medium
+    rule: >
+      All monetary values in this dataset are denominated in GBP British Pounds.
+      Always state the currency when presenting financial figures in answers.
+      Never convert to other currencies unless explicitly asked.
+    sql_implication: >
+      No SQL impact. Affects answer synthesis only.
+    violation_example: >
+      "Total revenue was $8.9 million"
+    correct_example: >
+      "Total revenue was £8.9 million GBP"
+
+  - id: BR006
+    name: prefer_aggregated_views
+    domain: Revenue
+    severity: medium
+    rule: >
+      For monthly or quarterly revenue questions always use pre-aggregated
+      views instead of re-aggregating raw fact_sales. Only query fact_sales
+      directly when a custom time grain such as weekly or daily is required.
+      Pre-aggregated views are faster and guaranteed accurate.
+    sql_implication: >
+      Use revenue_monthly_summary for monthly questions.
+      Use revenue_growth_analysis for growth questions.
+      Use yoy_revenue_analysis for year-over-year questions.
+      Use revenue_executive_summary for single-number KPI questions.
+    violation_example: >
+      SELECT SUM(revenue), EXTRACT(MONTH FROM order_date)
+      FROM fact_sales GROUP BY EXTRACT(MONTH FROM order_date)
+    correct_example: >
+      SELECT total_revenue, month_name FROM revenue_monthly_summary
+      WHERE year = 2011
+
+  - id: BR007
+    name: investment_strategy_preclassified
+    domain: Product
+    severity: high
+    rule: >
+      product_investment_analysis.investment_strategy contains pre-classified
+      values. Always query this classification directly. Never re-derive
+      investment strategy from revenue or quantity thresholds.
+      Valid values are: Invest More, Monitor, Marketing Opportunity, Premium Focus
+    sql_implication: >
+      SELECT investment_strategy FROM product_investment_analysis
+      Never derive strategy from revenue thresholds
+    violation_example: >
+      CASE WHEN revenue > 10000 THEN 'Invest More' ELSE 'Monitor' END
+    correct_example: >
+      SELECT description, investment_strategy FROM product_investment_analysis

@@ -1,0 +1,24 @@
+version: "1.0"
+
+template_name: anomaly_alert
+
+template: |
+  Revenue Anomaly Alert
+
+  Date:
+  {date}
+
+  Country:
+  {country_name}
+
+  Revenue:
+  {daily_revenue}
+
+  Anomaly Score:
+  {anomaly_score}
+
+  Direction:
+  {anomaly_direction}
+
+  Recommendation:
+  Investigate operational, pricing, or demand drivers.

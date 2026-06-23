@@ -1,0 +1,18 @@
+version: "1.0"
+
+metric_name: Average Purchase Frequency
+
+business_definition: >
+  Average number of orders per customer.
+
+formula: >
+  total_orders / customer_count
+
+preferred_tables:
+  - customer_segment_profile
+
+preferred_columns:
+  - avg_frequency
+
+business_interpretation: >
+  Measures customer purchasing activity.

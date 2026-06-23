@@ -1,0 +1,26 @@
+version: "1.0"
+
+metric_name: Year Over Year Growth
+
+business_definition: >
+  Revenue growth compared against the same period in the prior year.
+
+formula: >
+  ((current_year - previous_year) / previous_year) * 100
+
+preferred_tables:
+  - yoy_revenue_analysis
+
+preferred_columns:
+  - yoy_growth
+
+business_interpretation: >
+  Measures long-term business growth.
+
+common_questions:
+  - What was YoY growth?
+  - How did 2011 compare to 2010?
+
+sql_pattern: >
+  SELECT year, yoy_growth
+  FROM yoy_revenue_analysis

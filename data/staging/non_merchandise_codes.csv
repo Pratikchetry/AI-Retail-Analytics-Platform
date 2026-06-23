@@ -1,0 +1,4 @@
+stockcode,description,total_revenue,total_quantity,total_orders,product_type,is_merchandise
+M,Manual,339599.81,9630,785,service/manual,False
+DOT,DOTCOM POSTAGE,309854.11,1415,1415,postage/service,False
+POST,POSTAGE,125682.42,5363,1851,postage/service,False

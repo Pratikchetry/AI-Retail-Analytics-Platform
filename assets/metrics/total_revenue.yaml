@@ -1,0 +1,30 @@
+version: "1.0"
+
+metric_name: Total Revenue
+
+business_definition: >
+  Total monetary value generated from completed sales transactions.
+
+formula: >
+  SUM(revenue)
+
+preferred_tables:
+  - fact_sales
+  - revenue_monthly_summary
+  - revenue_executive_summary
+
+preferred_columns:
+  - revenue
+  - total_revenue
+
+business_interpretation: >
+  Core top-line business performance KPI.
+
+common_questions:
+  - What was total revenue in 2011?
+  - Which country generated the most revenue?
+  - What is monthly revenue?
+
+sql_pattern: >
+  SELECT SUM(revenue) AS total_revenue
+  FROM fact_sales
