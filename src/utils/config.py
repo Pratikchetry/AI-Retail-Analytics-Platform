@@ -6,7 +6,8 @@ import os
 load_dotenv()
 
 class Settings:
-    DATABASE_URL = os.getenv("DATABASE_URL")
+    # Renamed from DATABASE_URL to prevent Chainlit from hijacking it
+    DATABASE_URL = os.getenv("WAREHOUSE_DB_URL")
 
     LLM_PROVIDER = os.getenv("LLM_PROVIDER", "groq")
 

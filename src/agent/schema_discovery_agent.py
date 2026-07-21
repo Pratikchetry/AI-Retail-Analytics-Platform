@@ -164,6 +164,16 @@ class SchemaDiscoveryAgent:
                     "important_columns"
                 ):
                     capture = True
+                    # The asset loader places the first column on the
+                    # SAME line as 'important_columns:'. Capture it here
+                    # before moving on, otherwise PK/FK columns are lost.
+                    if ":" in line:
+                        remainder = line.split(":", 1)[1].strip()
+                        # remainder looks like "country_key: Surrogate country key"
+                        if ":" in remainder:
+                            col = remainder.split(":")[0].strip()
+                            if col and " " not in col and len(col) > 1:
+                                table_columns.add(col)
                     continue
                 if capture:
                     if (

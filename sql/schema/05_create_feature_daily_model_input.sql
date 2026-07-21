@@ -1,4 +1,4 @@
-DROP TABLE IF EXISTS feature_daily_model_input;
+DROP TABLE IF EXISTS feature_daily_model_input CASCADE;
 
 CREATE TABLE feature_daily_model_input AS
 

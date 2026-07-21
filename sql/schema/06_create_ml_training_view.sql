@@ -1,4 +1,4 @@
-DROP VIEW IF EXISTS vw_ml_training_data;
+DROP VIEW IF EXISTS vw_ml_training_data CASCADE;
 
 CREATE VIEW vw_ml_training_data AS
 

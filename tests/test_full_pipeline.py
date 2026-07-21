@@ -5,11 +5,11 @@ from src.agent.validation_agent import ValidationAgent
 from src.agent.business_reasoning_agent import BusinessReasoningAgent
 
 from src.executor.query_executor import (
-QueryExecutionEngine
+    QueryExecutionEngine
 )
 
 from src.agent.execution_validator import (
-ExecutionValidator
+    ExecutionValidator
 )
 
 def main():
@@ -93,60 +93,83 @@ def main():
                 validation_result.errors
             )
             continue
+        
         # =================================================
         # SQL Execution
         # =================================================
-        execution_result = (
-            executor.execute_query(
-                sql_result.sql
+        sql_to_execute = sql_result.sql.strip()
+        if sql_to_execute in ("NO_SQL_REQUIRED", "INFORMATION_NOT_AVAILABLE"):
+            print("\nEXECUTION")
+            print("-" * 80)
+            print("SKIPPED")
+            data = sql_to_execute
+        else:
+            execution_result = (
+                executor.execute_query(
+                    sql_result.sql
+                )
             )
-        )
-        print("\nEXECUTION")
-        print("-" * 80)
-        print(
-            execution_result["status"]
-        )
-        if (
-            execution_result["status"]
-            != "SUCCESS"
-        ):
+            print("\nEXECUTION")
+            print("-" * 80)
             print(
+                execution_result["status"]
+            )
+            if (
+                execution_result["status"]
+                != "SUCCESS"
+            ):
+                print(
+                    execution_result["data"]
+                )
+                continue
+            data = (
                 execution_result["data"]
             )
-            continue
-        data = (
-            execution_result["data"]
-        )
-        if hasattr(data, "head"):
-            print("\nRESULT SAMPLE")
+            if hasattr(data, "head"):
+                print("\nRESULT SAMPLE")
+                print("-" * 80)
+                print(data.head(10))
+            
+            # =================================================
+            # Execution Validation
+            # =================================================
+            execution_validation = (
+                execution_validator.validate(
+                    question=q,
+                    sql=sql_result.sql,
+                    execution_result=data
+                )
+            )
+            print("\nEXECUTION VALIDATION")
             print("-" * 80)
-            print(data.head())
-        # =================================================
-        # Execution Validation
-        # =================================================
-        execution_validation = (
-            execution_validator.validate(
-                question=q,
-                sql=sql_result.sql,
-                execution_result=data
-            )
-        )
-        print("\nEXECUTION VALIDATION")
-        print("-" * 80)
-        print(execution_validation)
-        if not execution_validation.valid:
-            print("\nBLOCKED")
-            print(
-                execution_validation.errors
-            )
-            continue
+            print(execution_validation)
+            if not execution_validation.valid:
+                print("\nBLOCKED")
+                print(
+                    execution_validation.errors
+                )
+                continue
+
         # =================================================
         # Business Reasoning
         # =================================================
+        if isinstance(data, str):
+            sql_result_str = data
+        else:
+            try:
+                sql_result_str = data.to_string(index=False)
+            except AttributeError:
+                sql_result_str = str(data)
+                
+        print("\nPASSING SQL TO REASONING:")
+        print("-" * 80)
+        print(sql_result_str)
+            
         reasoning_result = (
             reasoning_agent.reason(
                 q,
-                context_result.context
+                context_result.context,
+                sql_result=sql_result_str
             )
         )
         print("\nANSWER")

@@ -1,5 +1,6 @@
 from pathlib import Path
 import yaml
+import functools
 
 from src.rag.chunker import TextChunker
 
@@ -245,8 +246,9 @@ def load_yaml_assets():
     return documents
 
 
+@functools.lru_cache(maxsize=1)
 def load_all_assets():
-
+    """Loads all assets from disk exactly ONCE per process (cached)."""
     documents = []
 
     documents.extend(

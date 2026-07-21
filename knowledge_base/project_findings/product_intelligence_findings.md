@@ -33,7 +33,7 @@ Three charts:
 | Rank | Product | Revenue | Orders |
 |---|---|---|---|
 | 1 | REGENCY CAKESTAND 3 TIER | £330,590 | 3,918 |
-| 2 | CREAM HANGING HEART T-LIGHT HOLDER | £257,725 | 5,365 |
+| 2 | WHITE HANGING HEART T-LIGHT HOLDER | £257,725 | 5,365 |
 | 3 | JUMBO BAG RED RETROSPOT | £182,681 | 4,013 |
 | 4 | PAPER CRAFT, LITTLE BIRDIE | £168,470 | 1 |
 | 5 | PARTY BUNTING | £148,318 | 2,674 |
@@ -52,7 +52,7 @@ Three charts:
 | 1 | WORLD WAR 2 GLIDERS ASSTD DESIGNS | 106,139 | £24,446 |
 | 2 | JUMBO BAG RED RETROSPOT | 96,757 | £180,569 |
 | 3 | PACK OF 72 RETRO SPOT CAKE CASES | 94,884 | £51,825 |
-| 4 | CREAM HANGING HEART T-LIGHT HOLDER | 94,203 | £257,725 |
+| 4 | WHITE HANGING HEART T-LIGHT HOLDER | 94,203 | £257,725 |
 | 5 | POPCORN HOLDER | 88,499 | £79,520 |
 | 6 | PAPER CRAFT, LITTLE BIRDIE | 80,995 | £168,470 |
 | 7 | ASSORTED COLOUR BIRD ORNAMENT | 80,082 | £129,324 |
@@ -95,7 +95,7 @@ Two charts:
 | Rank | Product | Revenue | Contribution % |
 |---|---|---|---|
 | 1 | REGENCY CAKESTAND 3 TIER | £330,590 | 1.68% |
-| 2 | CREAM HANGING HEART T-LIGHT HOLDER | £257,725 | 1.31% |
+| 2 | WHITE HANGING HEART T-LIGHT HOLDER | £257,725 | 1.31% |
 | 3 | JUMBO BAG RED RETROSPOT | £182,681 | 0.93% |
 | 4 | PAPER CRAFT, LITTLE BIRDIE | £168,470 | 0.86% |
 | 5 | PARTY BUNTING | £148,318 | 0.75% |
@@ -120,7 +120,7 @@ Business action: Protect inventory · Increase marketing · Avoid stockouts
 Products confirmed in this quadrant:
 | Product | Revenue | Quantity |
 |---|---|---|
-| CREAM HANGING HEART T-LIGHT HOLDER | £257,725 | 94,203 |
+| WHITE HANGING HEART T-LIGHT HOLDER | £257,725 | 94,203 |
 | JUMBO BAG RED RETROSPOT | £182,681 | 97,176 |
 | PAPER CRAFT, LITTLE BIRDIE | £168,470 | 80,995 |
 | ASSORTED COLOUR BIRD ORNAMENT | £129,324 | 80,082 |
@@ -189,7 +189,7 @@ low-margin products. Planning using only quantity rankings misses
 high-value low-volume products.
 The performance matrix is the correct tool for a complete picture.
 
-### Finding 4 — CREAM HANGING HEART Is the True Star Product
+### Finding 4 — WHITE HANGING HEART T-LIGHT HOLDER Is the True Star Product
 This product is the only one that appears in:
 - Top 3 by revenue (£257,725, rank 2)
 - Top 4 by quantity (94,203 units, rank 4)

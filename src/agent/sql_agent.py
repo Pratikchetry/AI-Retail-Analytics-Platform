@@ -72,13 +72,12 @@ class SQLAgent:
             )
         )
 
-        context_lower = (
-            schema_context.lower()
-        )
-
         # =====================================
         # Metadata-only answers
+        # FIX: check the QUESTION, not the full retrieved context.
         # =====================================
+
+        question_lower = question.lower()
 
         metadata_keywords = [
 
@@ -102,7 +101,7 @@ class SQLAgent:
 
         for keyword in metadata_keywords:
 
-            if keyword in context_lower:
+            if keyword in question_lower:
 
                 return SQLGenerationResult(
                     sql="NO_SQL_REQUIRED",
@@ -196,6 +195,11 @@ INFORMATION_NOT_AVAILABLE
 
 14. If uncertain:
 INFORMATION_NOT_AVAILABLE
+
+15. NEVER describe what you WOULD query.
+    ALWAYS generate the actual executable SQL query that retrieves the data.
+    If the question has multiple parts, write one query that answers
+    the primary question. NEVER return a narrative description instead of SQL.
 
 Return EXACTLY:
 

@@ -49,6 +49,21 @@ class ValidationAgent:
         question: str = "",
         context: str = ""
     ):
+        sql_stripped = sql.strip()
+        if sql_stripped == "NO_SQL_REQUIRED":
+            return ValidationResult(
+                is_valid=True,
+                score=100.0,
+                errors=[],
+                warnings=["Knowledge base answer"]
+            )
+        if sql_stripped == "INFORMATION_NOT_AVAILABLE":
+            return ValidationResult(
+                is_valid=True,
+                score=100.0,
+                errors=[],
+                warnings=["Not in warehouse"]
+            )
 
         errors = []
         warnings = []

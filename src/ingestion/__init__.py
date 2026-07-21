@@ -1,0 +1,1 @@
+"""Real data ingestion layer: CSV -> warehouse."""

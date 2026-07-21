@@ -1,9 +1,96 @@
+# docker/docker-compose.yml
 services:
-  app:
+  # ---- PostgreSQL warehouse ----
+  postgres:
+    image: postgres:17
+    command: postgres -c max_connections=200
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-Pratik@123}
+      POSTGRES_DB: ${DB_NAME:-retail_db}
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ---- FastAPI backend ----
+  api:
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    env_file:
-      - ../.env
+    env_file: ../.env
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: Pratik@123
+      DB_NAME: retail_db
+      DATABASE_URL: postgresql://postgres:Pratik%40123@postgres:5432/retail_db
+      CHROMA_DB_PATH: /app/chroma_store
     ports:
       - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ../chroma_store:/app/chroma_store
+      - ../outputs:/app/outputs
+      - ../data:/app/data
+    command: uvicorn src.app.api:app --host 0.0.0.0 --port 8000
+
+  # ---- Streamlit UI ----
+  ui:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    env_file: ../.env
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: Pratik@123
+      DB_NAME: retail_db
+      DATABASE_URL: postgresql://postgres:Pratik%40123@postgres:5432/retail_db
+      API_BASE: http://api:8000
+      PYTHONPATH: /app
+    ports:
+      - "8501:8501"
+    depends_on:
+      - api
+    volumes:
+      - ../data:/app/data
+    command: streamlit run src/app/streamlit_app.py --server.port=8501 --server.address=0.0.0.0
+
+  # ---- One-shot bootstrap: schema + data + models ----
+  setup:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    env_file: ../.env
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: Pratik@123
+      DB_NAME: retail_db
+      DATABASE_URL: postgresql://postgres:Pratik%40123@postgres:5432/retail_db
+      CHROMA_DB_PATH: /app/chroma_store
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ../data:/app/data
+      - ../chroma_store:/app/chroma_store
+      - ../outputs:/app/outputs
+      - ../sql:/app/sql
+      - ../assets:/app/assets
+      - ../knowledge_base:/app/knowledge_base
+    entrypoint: ["python", "-m", "src.pipeline", "all"]
+
+volumes:
+  pgdata:

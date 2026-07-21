@@ -21,38 +21,32 @@ class BusinessReasoningAgent:
     def reason(
         self,
         question: str,
-        context: str
+        context: str,
+        sql_result: str = None
     ) -> BusinessReasoningResult:
+
+        sql_section = ""
+        if sql_result and sql_result not in ("NO_SQL_REQUIRED", "INFORMATION_NOT_AVAILABLE"):
+            sql_section = f"SQL EXECUTION RESULT (GROUND TRUTH — USE THIS FIRST):\n{sql_result}\n\n"
 
         prompt = f"""
 You are a Senior Revenue Intelligence Consultant.
 
-Question:
-{question}
+EVIDENCE HIERARCHY:
+1. SQL EXECUTION RESULT = ground truth. Never contradict it.
+2. KNOWLEDGE BASE = context only. Use to explain, never to override.
+3. If SQL empty/None, use knowledge base as primary.
 
-Retrieved Context:
+{sql_section}KNOWLEDGE BASE (CONTEXT ONLY):
 {context}
 
-Instructions:
+QUESTION: {question}
 
-1. Do NOT summarize the whole context.
-
-2. Find only evidence directly relevant
-to the question.
-
-3. Rank evidence if multiple facts exist.
-
-4. If a single best answer exists,
-return ONLY that answer.
-
-5. If information is missing,
-explicitly say:
-
-"Information not available in knowledge base."
-
-6. Use business reasoning.
-
-7. Never invent facts.
+CRITICAL INSTRUCTIONS:
+- If the SQL EXECUTION RESULT contains data, you MUST use it as your ANSWER.
+- Do NOT say "the SQL result does not answer the question". The SQL was written by an expert.
+- If the SQL returns a single row, that row is the answer.
+- Never invent numbers. All money is GBP (£).
 
 Return exactly:
 
