@@ -1,413 +1,266 @@
-<div align="center">
+# 🛍️ Retail Revenue Intelligence Platform
 
-# 🏪 Retail Revenue Intelligence & Anomaly Detection
+**An end-to-end, multi-agent AI copilot that answers natural-language questions about a UK retail business — reasoning over a live PostgreSQL warehouse, forecasting revenue with XGBoost, and verifying its own answers against ground-truth data.**
 
-### End-to-End Retail Analytics System
-### PostgreSQL · XGBoost · SHAP · Tableau · Power BI · GCP · LangGraph · RAG AI Agent
-
-<br>
-
-![Python](https://img.shields.io/badge/Python-3.12-blue?style=for-the-badge&logo=python)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17.9-336791?style=for-the-badge&logo=postgresql)
-![Tableau](https://img.shields.io/badge/Tableau-11%20Dashboards-E97627?style=for-the-badge&logo=tableau)
-![Power BI](https://img.shields.io/badge/Power%20BI-DAX%20Companion-F2C811?style=for-the-badge&logo=powerbi)
-![XGBoost](https://img.shields.io/badge/XGBoost-V1%20%26%20V2-FF6600?style=for-the-badge)
-![SHAP](https://img.shields.io/badge/SHAP-Explainability-8A2BE2?style=for-the-badge)
-![scikit-learn](https://img.shields.io/badge/scikit--learn-ML-F7931E?style=for-the-badge&logo=scikitlearn)
-![Jupyter](https://img.shields.io/badge/Jupyter-Notebooks-F37626?style=for-the-badge&logo=jupyter)
-
-<br>
-
-> Built on **1,067,371 raw transactions** — profiled, cleaned, warehoused,
-> segmented, anomaly-scored, forecast, explained, and dashboarded
-> across **11 Tableau dashboards** and **two model generations**.
-
-</div>
+> Not a tutorial project. Not a demo with hardcoded answers. Every metric below traces to real warehouse data or a real trained model.
 
 ---
 
-## What This Project Answers
+## 🎯 Why This Project Is Different
 
-| Business Question | How Answered |
+| | |
 |---|---|
-| What happened to revenue? | Revenue Intelligence dashboard — monthly trend, seasonality, YoY, MoM |
-| Which products drive the business? | Product Intelligence dashboard — revenue, quantity, performance matrix, investment strategy |
-| Which customers matter most? | RFM segmentation — 5,878 customers, 5 segments, retention action matrix |
-| What was unusual? | IsolationForest anomaly detection — 139 anomalies across 18 countries |
-| What will happen next? | XGBoost V2 — MAE £7,248, WAPE 14.4%, R² 0.63 |
-| Why does the model predict what it predicts? | SHAP — feature-level attribution for every prediction |
-| Did V2 improve over V1? | V1 vs V2 comparison — 5 of 6 metrics improved, MAE +40.87% |
+| **1.2M+ rows** of real UK retail transactions processed through a custom ETL pipeline | **12-node LangGraph agent** with routing, context compression, self-verification, and a critic quality gate |
+| **MAE £6,892** XGBoost forecast model (67% better than baseline) — tracked in MLflow | **The agent caught its own data bug**: a knowledge-base claim was wrong, the verifier flagged it, and the warehouse truth won |
+| **77% prompt noise reduction** via context engineering (not just RAG) | **One-command Docker bootstrap** — schema, data, models, embeddings, API, UI |
 
 ---
 
-## Project Status
+## 🧰 Tech Stack
 
-| Phase | Status |
-|---|---|
-| Raw data profiling | ✅ Complete |
-| Data cleaning with audit trail | ✅ Complete |
-| Exploratory data analysis | ✅ Complete |
-| PostgreSQL warehouse (validated) | ✅ Complete |
-| SQL analytics layer (15 views) | ✅ Complete |
-| RFM customer segmentation | ✅ Complete |
-| IsolationForest anomaly detection | ✅ Complete |
-| Revenue forecasting V1 — XGBoost + SHAP | ✅ Complete |
-| Revenue forecasting V2 — enriched features | ✅ Complete |
-| Tableau dashboards — 11 pages total | ✅ Complete |
-| GitHub polish and public release | 📋 Next |
-| GCP deployment — BigQuery + Cloud Run | 📋 Planned |
-| FastAPI + Docker + CI/CD | 📋 Planned |
-| RAG AI Agent — LangChain + LangGraph + Gemini | 📋 Planned |
-| Voice Agent | 📋 Planned |
+![Python](https://img.shields.io/badge/Python-3.11-blue)
+![LangGraph](https://img.shields.io/badge/LangGraph-Multi--Agent-orange)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Warehouse-blue)
+![XGBoost](https://img.shields.io/badge/XGBoost-Forecasting-red)
+![FastAPI](https://img.shields.io/badge/FastAPI-Backend-green)
+![Chainlit](https://img.shields.io/badge/Chainlit-UI-purple)
+![Docker](https://img.shields.io/badge/Docker-Containerized-blue)
+![MLflow](https://img.shields.io/badge/MLflow-MLOps-pink)
+![GitHub Actions](https://img.shields.io/badge/CI/CD-GitHub_Actions-black)
+
+**LLM Layer:** Google Gemini 2.0 Flash (primary) + Groq llama-3.3-70b (fallback) via a custom LLM Router
+**Vector Store:** ChromaDB + sentence-transformers (all-MiniLM-L6-v2)
+**Anomaly Detection:** Isolation Forest (scikit-learn)
 
 ---
 
-## Dataset
+## 📖 The Story (What This Actually Does)
 
-**Source:** Online Retail II — UCI Machine Learning Repository
-**File:** `data/raw/online_retail_ii/online_retail_II.xlsx`
-**MD5:** `ed54ccfc5d358481c399cc11d0a244be`
-**Currency:** GBP (£) — all monetary values are British Pounds Sterling
-**Period:** December 2009 — December 2011
-**Geography:** 43 countries, UK-dominant wholesale retailer
+You're the CEO of a UK gift retailer. You open a chat window and type:
+
+> *"Why did revenue drop last quarter, and what should I do about it?"*
+
+A traditional dashboard can't answer that. This system can. Here's what happens in the ~8 seconds before you get a response:
+
+1. **A router agent classifies your intent** — Is this a SQL lookup? A forecast request? Out of scope (like asking about TikTok ad spend)? It decides before touching the database.
+2. **A RAG retriever pulls relevant context** from 174 business knowledge assets (schema docs, business rules, findings) — then a **context compressor throws away 77% of it**, keeping only the 3 most relevant chunks. Less noise = fewer hallucinations.
+3. **A SQL agent writes real PostgreSQL**, a validator checks it against 7 business rules (no `SELECT *`, never join accounting adjustments unless asked, etc.), and it executes against the live warehouse.
+4. **A reasoning agent synthesizes the answer** using an evidence hierarchy: SQL result is ground truth; knowledge base is supporting context only.
+5. **A metadata verifier cross-checks factual claims against the warehouse.** If the knowledge base says "Product X is the superstar" but the data disagrees, **the warehouse wins** and the answer is corrected automatically.
+6. **A critic scores the final answer 0.0–1.0.** If it's below 0.7, the agent retries. You never see a low-quality answer.
+
+### The Moment That Made This Project Real
+
+During testing, the agent was asked: *"What is the only true Superstar product?"*
+
+The knowledge base confidently said **"CREAM HANGING HEART T-LIGHT HOLDER."**
+
+The verifier queried the warehouse. The real top product was **WHITE HANGING HEART T-LIGHT HOLDER** (£261,169, rank #1 on all three dimensions). The name "CREAM" had been wrong since day one — baked into the project docs by mistake. Nobody noticed because every system before this one trusted the documents blindly.
+
+This system didn't. The verifier flagged the conflict, corrected the answer, and the critic passed it at 1.0.
+
+**That's what context engineering means.** Not just retrieving documents — deciding what to trust.
 
 ---
 
-## Key Results
+## 🏗️ Architecture (Plain English)
 
-### Revenue Overview
+```text
+You type a question
+       |
+       v
++-------------+
+|   ROUTER    |  "Is this SQL? Forecast? Out of scope?"
++------+------+
+       |
+   +---+----+---------------+--------------+
+   |        |               |              |
+   v        v               v              v
+SQL Chain  Forecast Node  Anomaly Node   Decline
+   |       (XGBoost)    (Isolation      (out of
+   |                      Forest)        scope)
+   v
++---------------+
+| RAG RETRIEVE  |  Pull 174 knowledge assets
++-------+-------+
+        v
++---------------+
+|  COMPRESSOR   |  Keep top 3, drop 77% noise
++-------+-------+
+        v
++---------------+      +-----------+
+|  SQL GENERATE |---> | VALIDATE  |--(fail)--> retry (max 3)
++-------+-------+      +-----+-----+
+        |                    |(pass)
+        v                    v
++---------------+      +-----------+
+|  SQL EXECUTE  |---> | REASONING |  (SQL = ground truth)
++---------------+      +-----+-----+
+                             v
+                     +---------------+
+                     |   VERIFIER    |  Cross-check claims vs warehouse
+                     | (warehouse    |  (warehouse wins on conflict)
+                     |   wins)       |
+                     +-------+-------+
+                             v
+                     +---------------+
+                     |RECOMMENDATION |  "So what / do this"
+                     +-------+-------+
+                             v
+                     +---------------+
+                     |    CRITIC     |  Score 0.0-1.0
+                     | (block < 0.7) |  (retry if low)
+                     +-------+-------+
+                             v
+                         YOUR ANSWER
+```
+
+**Why this design (not just "a RAG chatbot"):**
+- **Agents vs. Nodes:** Business logic (SQL generation, validation) lives in reusable `src/agent/` classes. Control flow (routing, retries, critic loops) lives in `src/langgraph/nodes/`. You don't ask the SQL specialist to also manage the company — same principle.
+- **Context engineering > pure RAG:** RAG retrieves everything. Context engineering decides what *survives* (compressor), what *gets trusted* (verifier), and what *wins* on conflict (warehouse). This is why the system has a 100% pass rate on scored eval questions.
+- **No Airflow:** For a single pipeline, Airflow is overhead. The `src.pipeline` CLI + Docker handles orchestration with retry logic already built into LangGraph.
+
+---
+
+## 📊 Ground Truth (Verified Numbers)
+
+Every number here comes from the live warehouse or a real model artifact — not estimates.
+
 | Metric | Value |
 |---|---|
-| Total revenue | £20,476,634 |
-| Average monthly revenue | £819,065 |
-| Best month | November 2011 — £1,503,867 |
-| Worst month | February 2011 — £522,546 |
-| YoY growth (2010 vs 2011) | −0.13% |
-| UK revenue share | 85.0% (£17,410,570) |
+| Total Revenue (all time) | **£20,476,634** |
+| Fact Sales Rows | **1,007,914** |
+| Customers / Products / Countries | 5,879 / 4,917 / 43 |
+| Best Month | November 2011 (£1,503,867) |
+| YoY Growth | −0.13% (Dec 2011 partial-month artifact, not real decline) |
+| True Superstar Product | **WHITE HANGING HEART T-LIGHT HOLDER** (£261,169, rank #1 on revenue + quantity + orders) |
+| Forecast Model (XGBoost V2) | **MAE £6,892 · R² 0.67 · 67% better than naive baseline** |
+| Anomalies Detected | **144** (4.98% of country-days, including the famous Dec 9 £196K spike) |
+| 30-Day Forecast Total | £2,195,974 (avg £73,199/day) |
+| LLM Calls Per Question | **5** (optimized down from 9 via graph deduplication) |
+| Context Noise Reduction | **77%** (via context compressor) |
+| Eval Pass Rate | **5/5 = 100%** on scored questions |
 
-### Monthly Revenue — 2010 vs 2011 YoY
-| Month | 2010 | 2011 | YoY % |
-|---|---|---|---|
-| Jan | £651,155 | £689,812 | +5.94% |
-| Feb | £551,878 | £522,546 | −5.32% |
-| Mar | £830,915 | £716,215 | −13.80% |
-| Apr | £678,875 | £536,968 | −20.90% |
-| May | £657,706 | £769,297 | +16.97% |
-| Jun | £749,537 | £760,547 | +1.47% |
-| Jul | £648,810 | £718,076 | +10.68% |
-| Aug | £695,252 | £757,841 | +9.00% |
-| Sep | £921,697 | £1,056,435 | +14.62% |
-| Oct | £1,161,902 | £1,151,264 | −0.92% |
-| Nov | £1,464,293 | £1,503,867 | +2.70% |
-| Dec | £821,453 | £637,808 | −22.36% |
+---
 
-### Product Intelligence
-**Top 5 by Revenue**
-| Product | Revenue | Contribution % |
+## 🚀 Quickstart
+
+### Option A: Docker (one command — recommended)
+
+```bash
+# 1. Bootstrap the full stack (schema + 1M rows + models + embeddings)
+docker compose -f docker/docker-compose.yml up --build setup
+
+# 2. Start the product (API + UI + Postgres)
+docker compose -f docker/docker-compose.yml up -d
+```
+
+Then open:
+- **Chat UI:** http://localhost:8001
+- **API Docs (Swagger):** http://localhost:8000/docs
+
+### Option B: Local Development
+
+```bash
+# Setup
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env  # Add GROQ_API_KEY and GEMINI_API_KEY
+
+# Run the full data + ML pipeline
+PYTHONPATH=. python -m src.pipeline all
+
+# Start API + UI together
+./run_app.sh
+```
+
+---
+
+## 🔌 API Endpoints
+
+| Method | Path | Purpose |
 |---|---|---|
-| REGENCY CAKESTAND 3 TIER | £330,590 | 1.68% |
-| CREAM HANGING HEART T-LIGHT HOLDER | £257,725 | 1.31% |
-| JUMBO BAG RED RETROSPOT | £182,681 | 0.93% |
-| PAPER CRAFT, LITTLE BIRDIE | £168,470 | 0.86% |
-| PARTY BUNTING | £148,318 | 0.75% |
-
-**Top 5 by Quantity Sold**
-| Product | Quantity |
-|---|---|
-| WORLD WAR 2 GLIDERS ASSTD DESIGNS | 106,139 |
-| JUMBO BAG RED RETROSPOT | 96,757 |
-| PACK OF 72 RETRO SPOT CAKE CASES | 94,884 |
-| CREAM HANGING HEART T-LIGHT HOLDER | 94,203 |
-| POPCORN HOLDER | 88,499 |
-
-**Product Investment Strategy Distribution**
-| Strategy | Products |
-|---|---|
-| Monitor | 3,172 |
-| Invest More | 810 |
-| Premium Focus | 371 |
-| Marketing Opportunity | 371 |
-
-**Product Performance Quadrants**
-| Quadrant | Revenue | Quantity | Action |
-|---|---|---|---|
-| Superstar Products | High | High | Protect inventory, increase marketing |
-| Premium Products | High | Lower | Premium positioning, cross-sell |
-| Mass Market Products | Lower | High | Volume efficiency, margin review |
-| Underperforming Products | Low | Low | Monitor or discontinue |
-
-### Customer Segmentation
-| Segment | Customers | Avg Value | Avg Purchases | Avg Days Inactive |
-|---|---|---|---|---|
-| Champions | 1,317 | £9,552 | 17.71 | 25.1 |
-| Loyal Customers | 1,341 | £2,298 | 5.58 | 100.0 |
-| Potential Loyalists | 968 | £907 | 3.00 | 173.1 |
-| At Risk | 1,411 | £475 | 1.69 | 292.6 |
-| Lost Customers | 841 | £198 | 1.04 | 515.0 |
-| **Total** | **5,878** | — | — | — |
-
-### Anomaly Detection
-| Metric | Value |
-|---|---|
-| Countries scored | 18 of 43 |
-| Total anomalies | 139 |
-| High anomalies (positive spikes) | 117 (84.17%) |
-| Low anomalies (demand drops) | 22 (15.83%) |
-
-### Forecasting — V1 vs V2
-| Metric | V1 | V2 | Improvement |
-|---|---|---|---|
-| MAE | £12,258 | £7,248 | **+40.87%** |
-| RMSE | £20,764 | £15,641 | **+24.67%** |
-| R² | 34.89% | 63.06% | **+80.72%** |
-| WAPE | 24.38% | 14.41% | **+40.87%** |
-| Spike-Day MAE | £42,755 | £29,408 | **+31.22%** |
-| Bias | −8.54% | −9.08% | −6.29% |
-| **Overall** | — | — | **V2 wins 5 of 6** |
+| `POST` | `/ask` | Natural language → full agent response (answer, SQL, evidence, critic score) |
+| `POST` | `/forecast` | Direct XGBoost model access (bypass router) |
+| `POST` | `/ingest` | Reload warehouse from staging CSVs |
+| `GET` | `/health` | Service + dependency health check |
+| `GET` | `/metrics` | KPI snapshot from the warehouse |
+| `GET` | `/custom/monthly-revenue` | Monthly revenue time series (chart data) |
+| `GET` | `/custom/segment-revenue` | Customer segment breakdown |
 
 ---
 
-## All 11 Tableau Dashboards
-
-### V1 Dashboards (Original 4)
-| # | Dashboard | Key Finding |
-|---|---|---|
-| 1 | Revenue Overview | £20.47M total, UK = 85%, Nov peak |
-| 2 | RFM Customer Segmentation (V1) | Champions drive 67.89% of revenue |
-| 3 | Forecast Performance (V1) | MAE £12,258, RMSE £20,764 |
-| 4 | Anomaly Monitoring | 139 anomalies, 84% positive spikes |
-
-### V2 Dashboards (New 7)
-| # | Dashboard | Key Finding |
-|---|---|---|
-| 5 | Revenue Intelligence & Growth Analytics | YoY −0.13%, Nov best, Feb worst, MoM trends |
-| 6 | Product Intelligence & Investment Strategy (P1) | Cakestand £330K top, 3,172 Monitor products |
-| 7 | Product Intelligence & Investment Strategy (P2) | 4-quadrant performance matrix, contribution % |
-| 8 | V1 vs V2 Forecast Performance | MAE +40.87%, R² +80.72% |
-| 9 | Forecast Monitoring & Operations Intelligence | WAPE 14.4%, V2 error vs V1 error comparison |
-| 10 | V2 Business Impact Analysis | £450,900 quarterly improvement |
-| 11 | Customer Segmentation & Retention Intelligence | Champions £9,552, At Risk 1,411 customers |
-
----
-
-## SQL Analytics Layer
-
-15 analytics views built in PostgreSQL covering the full business intelligence stack:
-
-```
-sql/analytics/
-├── 01_customer_rfm_base.sql
-├── 02_customer_rfm_segmentation.sql
-├── 03_customer_segment_revenue.sql
-├── 04_customer_segment_profile.sql
-├── 05_update_customer_dimension.sql
-├── 06_revenue_monthly_summary.sql
-├── 07_revenue_seasonality.sql
-├── 08_monthly_growth_analysis.sql
-├── 09_yoy_revenue_analysis.sql
-├── 10_revenue_executive_summary.sql
-├── 11_product_revenue_analysis.sql
-├── 12_product_quantity_analysis.sql
-├── 13_product_revenue_contribution.sql
-├── 14_product_performance_matrix.sql
-└── 15_product_investment_analysis.sql
-```
-
----
-
-## Architecture
-
-```
-Raw Excel (data/raw/)
-        │
-        ▼
-01 — Data Profiling       ← observation only, profiling_summary.json
-02 — Data Cleaning        ← cleaning_audit_log.csv, 4 staging CSVs
-03 — EDA                  ← business findings documented
-        │
-        ▼
-PostgreSQL retail_db      ← validated dimensional warehouse
-  Dimensions: dim_date, dim_product (is_merchandise),
-              dim_customer (Unknown surrogate),
-              dim_country, dim_holiday_uk
-  Facts: fact_sales, fact_returns, fact_adjustments
-  ML: ml_rfm_segments, ml_anomaly_scores, revenue_forecast
-  Features: feature_daily_enriched, feature_daily_model_input
-  Analytics: 15 SQL views (revenue, product, customer, growth)
-        │
-        ├── 04 — RFM Segmentation
-        ├── 05 — Anomaly Detection
-        └── 06 — Forecasting (Baseline → SARIMA → V1 → V2 → SHAP)
-        │
-        ▼
-Tableau (11 Dashboards)   Power BI / DAX (in progress)
-        │
-        ▼  [Planned]
-GCP: BigQuery + Cloud Run
-FastAPI + Docker + CI/CD
-LangGraph RAG AI Agent + Voice Agent
-```
-
----
-
-## Project Structure
+## 🗂️ Project Structure
 
 ```
 retail-revenue-intelligence/
-│
-├── data/
-│   ├── raw/online_retail_ii/online_retail_II.xlsx
-│   ├── staging/
-│   │   ├── sales_main.csv
-│   │   ├── returns_cancellations.csv
-│   │   ├── accounting_adjustments.csv
-│   │   └── non_merchandise_codes.csv
-│   └── exports/
-│
-├── docs/
-│   ├── ABSTRACT.md
-│   ├── ABOUT_THE_ANALYST.md
-│   ├── data_findings.md
-│   ├── HOW_TO_READ_NOTEBOOKS.md
-│   ├── TABLEAU_GUIDE.md
-│   └── validation_benchmark.md
-│
-├── knowledge_base/
-│   ├── project_findings/
-│   │   ├── eda_findings.md
-│   │   ├── rfm_findings.md
-│   │   ├── anomaly_findings.md
-│   │   ├── forecast_results.md
-│   │   ├── business_impact_findings.md
-│   │   ├── revenue_intelligence_findings.md
-│   │   └── product_intelligence_findings.md
-│   ├── data_context/
-│   │   ├── data_dictionary.md
-│   │   └── business_rules.md
-│   └── model_documentation/
-│       ├── model_limitations.md
-│       └── v2_roadmap.md
-│
-├── notebooks/
-│   ├── 01_data_understanding.ipynb
-│   ├── 02_data_cleaning.ipynb
-│   ├── 03_eda.ipynb
-│   ├── 04_rfm_segmentation.ipynb
-│   ├── 05_anomaly_detection.ipynb
-│   └── 06_forecasting.ipynb
-│
-├── outputs/reports/
-│   ├── profiling_summary.json
-│   ├── cleaning_audit_log.csv
-│   └── forecast_summary_xgboost.json
-│
-├── sql/
-│   ├── analytics/          ← 15 business intelligence views
-│   ├── queries/            ← ad hoc analysis queries
-│   ├── schema/             ← table definitions + holiday + feature tables
-│   ├── seeds/              ← seed data + UK holiday seed
-│   └── validation/         ← post-load validation queries
-│
 ├── src/
-│   ├── ml/isolation_forest.py
-│   └── utils/db_loader.py
-│
-├── tableau/
-│   ├── workbooks/          ← 11 .twb files
-│   ├── screenshots/v1/     ← 4 V1 PNGs
-│   ├── screenshots/v2/     ← 7 V2 PNGs
-│   └── README.md
-├── tests/test_data_quality.py
-├── .env.example
-├── .gitignore
-├── README.md
+│   ├── agent/              # Reusable capabilities (SQL gen, validation, reasoning)
+│   ├── langgraph/          # The multi-agent brain (StateGraph + 12 nodes)
+│   ├── ml/                 # Real ML models (XGBoost V2, Isolation Forest)
+│   ├── ingestion/          # CSV → warehouse ETL (real, not mock)
+│   ├── rag/                # ChromaDB + hybrid keyword/semantic retrieval
+│   ├── app/                # FastAPI backend + Chainlit UI
+│   ├── executor/           # Read-only warehouse executor (pooled)
+│   ├── llm/                # LLM Router (Gemini 2.0 + Groq fallback)
+│   └── utils/              # Config, DB engine, logger
+├── sql/                    # Schema, seeds, 15 analytics views, feature tables
+├── assets/                 # 24 schema YAMLs, 13 metric defs, 7 business rules
+├── knowledge_base/         # Markdown findings (the RAG knowledge layer)
+├── docker/                 # Dockerfile + docker-compose (app + postgres)
+├── tests/                  # Router test, eval harness, integration tests
+├── .github/workflows/      # CI: lint + import validation + router test
 └── requirements.txt
 ```
 
 ---
 
-## Validation Benchmarks
+## 🧪 Quality & Engineering Decisions
 
-| Metric | Value |
-|---|---|
-| Raw rows | 1,067,371 |
-| Valid sales rows | 1,007,914 |
-| Total revenue | £20,476,634.00 |
-| Merchandise revenue | £19,701,497.66 |
-| Unique customers | 5,942 |
-| Forecasting series (continuous) | 739 rows |
-| Holdout rows | 90 |
-| V2 MAE | £7,248 |
-| V2 RMSE | £15,641 |
-| V2 WAPE | 14.41% |
-| V2 R² | 0.631 |
-| Total anomalies | 139 |
-| SQL analytics views | 15 |
-| Tableau dashboards | 11 |
+### Context Engineering (the differentiator)
+Most RAG systems dump retrieved documents into a prompt and hope. This system enforces a trust hierarchy:
+- **Layer 1 — Routing:** Out-of-scope questions (TikTok, competitors) rejected before touching the warehouse.
+- **Layer 2 — Compression:** Top-3 relevant chunks only; 77% noise dropped.
+- **Layer 3 — Evidence Hierarchy:** SQL result = ground truth. Knowledge base = context only.
+- **Layer 4 — Verification:** Factual claims cross-checked against live data. Warehouse wins on conflict.
+- **Layer 5 — Critique:** Final answer scored 0.0–1.0. Below 0.7 = retry.
 
----
+### MLOps
+- XGBoost training logs parameters, metrics (MAE, RMSE, R², baseline comparison), and model artifacts to **MLflow Tracking**.
+- Model registered in **MLflow Model Registry** with versioning.
+- Local `.pkl` artifact also saved for the LangGraph forecast node to load at inference time.
 
-## Notebooks Reading Order
+### CI/CD
+- GitHub Actions runs on every PR/push: Ruff lint → import validation → router unit test.
+- Router test uses GitHub Secrets for the Groq API key; fails gracefully (non-blocking) if secret missing.
 
-| Notebook | Purpose |
-|---|---|
-| 01_data_understanding | Profiling — observation only |
-| 02_data_cleaning | Cleaning with formal audit trail |
-| 03_eda | EDA on staging data |
-| 04_rfm_segmentation | RFM scoring + PostgreSQL write-back |
-| 05_anomaly_detection | IsolationForest country-level scoring |
-| 06_forecasting | Baseline → SARIMA → XGBoost V1 → V2 → SHAP |
+### Honest Limitations
+- **Groq free tier** throttles rapid bursts; mitigated by LLM Router (Gemini primary, Groq fallback) + exponential backoff.
+- **Forecast model** underpredicts rare extreme spike days (like Dec 9) — documented honestly in the metrics JSON, not hidden.
+- **ChromaDB** has no partitioning (174 assets = brute-force search is instant; partitioning would add complexity for zero gain at this scale).
 
 ---
 
-## Key Architecture Decisions
+## 🎓 What I Learned 
 
-| Decision | Reason |
-|---|---|
-| EDA before schema design | Discovered non-merchandise codes before committing to schema |
-| No db_ready CSV layer | Column filtering in loader script, not duplicate files |
-| Returns in separate fact table | Prevents silent revenue understatement |
-| Country-level anomaly detection | Prevents UK volume dominating the anomaly budget |
-| Holiday dimension seeded | Enables V2 forecasting and future promotional analysis |
-| feature_daily_enriched table | Clean separation of ML feature engineering from raw warehouse |
-| Same 90-day holdout for all models | Ensures fair V1 vs V2 comparison |
+**Q: Why LangGraph instead of a simple chain?**
+A chain is linear. This system needs conditional branching (route by intent), retry loops (validation failure, critic failure), and parallel tool dispatch (SQL vs forecast vs anomaly). LangGraph's StateGraph expresses that control flow cleanly. A chain would force it into spaghetti.
 
----
+**Q: Why separate `src/agent/` and `src/langgraph/nodes/`?**
+Agents contain business logic (the SQL prompt, the validation rules). Nodes contain control flow (when to retry, what state to write). Separating them means I can unit-test "does this SQL agent generate valid SQL?" without spinning up the whole graph. Same pattern as LangChain tools + agent loop.
 
-## Tech Stack
+**Q: What's context engineering and why does it matter?**
+RAG retrieves everything. Context engineering decides what survives (compressor), what gets trusted (verifier), and what wins on conflict (warehouse). It's the difference between a system that hallucinates confidently and one that caught its own data bug.
 
-**Data & ML:** Python 3.12 · Pandas · NumPy · scikit-learn · XGBoost ·
-LightGBM · statsmodels · SHAP · SQLAlchemy
-
-**Database:** PostgreSQL 17.9
-
-**BI:** Tableau Desktop
-
-**Planned:** GCP (BigQuery · Cloud Storage · Cloud Run) · Docker ·
-FastAPI · LangChain · LangGraph · Gemini 1.5 Flash · ChromaDB ·
-Qdrant · CI/CD (GitHub Actions)
+**Q: Why no Airflow?**
+For a single pipeline, Airflow is overhead. My `src.pipeline` CLI handles orchestration with retries already built into LangGraph. Airflow shines when you have dozens of pipelines across teams — not here.
 
 ---
 
-## Important Notes
+## 📄 License
 
-1. **Currency:** All values are GBP (£).
-2. **RFM correction:** An earlier dashboard version had inverted segment
-   labels. The current version is correct — Champions show highest value
-   (£9,552), highest frequency (17.71), lowest recency (25.1 days).
-3. **YoY growth of −0.13%** is not a business failure. Revenue is nearly
-   flat year-over-year while H2 2011 shows clear acceleration vs H2 2010.
-   The negative figure is driven by the partial December 2011 series.
-4. **Paper Craft Little Birdie** (£168,470, 1 order) is a single-invoice
-   bulk purchase anomaly — not a recurring product line.
+MIT
 
 ---
 
-## Contact
-
-**Built by:** Pratik Chetry
-**LinkedIn:** [Your LinkedIn URL]
-**GitHub:** [This repository URL]
-**Tableau Public:** [Add after publishing]
-
-Open to remote roles in Data Science, Analytics Engineering, ML Engineering.
+> *Built from scratch — real data, real models, real architecture decisions. No tutorial copies, no hardcoded answers.*
