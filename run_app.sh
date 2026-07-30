@@ -1,17 +1,17 @@
 #!/bin/bash
 
-# 1. Start FastAPI in the background (no auto-reload to keep it fast)
-echo "Starting FastAPI backend on port 8000..."
-PYTHONPATH=. uvicorn src.app.api:app --port 8000 &
+# 1. Start FastAPI in the background on port 8000
+echo "Starting FastAPI backend..."
+PYTHONPATH=. uvicorn src.app.api:app --host 0.0.0.0 --port 8000 &
 API_PID=$!
 
 # Give the API a few seconds to wake up
 sleep 5
 
-# 2. Start Chainlit in the foreground
-echo "Starting Chainlit UI on port 8001..."
-PYTHONPATH=. chainlit run src/app/chainlit_app.py --port 8001
+# 2. Start Chainlit in the foreground on Render's required port
+echo "Starting Chainlit UI..."
+PYTHONPATH=. chainlit run src/app/chainlit_app.py --host 0.0.0.0 --port ${PORT:-8000}
 
-# 3. When Chainlit closes (Ctrl+C), kill the background API cleanly
+# 3. When Chainlit closes, kill the background API cleanly
 echo "Shutting down API..."
 kill $API_PID

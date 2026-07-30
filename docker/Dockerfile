@@ -18,6 +18,7 @@ COPY . .
 
 # Default command (overridden per-service in compose)
 ENV PYTHONPATH=/app
-EXPOSE 8000
+EXPOSE 8000 8001
 
-CMD ["uvicorn", "src.app.api:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run both API and UI together
+CMD ["bash", "run_app.sh"]
