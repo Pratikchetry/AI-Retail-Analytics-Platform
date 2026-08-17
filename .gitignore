@@ -33,4 +33,10 @@ weights/
 *.sqlite3
 *.db
 
-data/staging/*.csv
+# Massive Data Folders (Do not upload to GitHub)
+data/
+outputs/
+backup.sql
+
+# Chainlit
+.chainlit/
