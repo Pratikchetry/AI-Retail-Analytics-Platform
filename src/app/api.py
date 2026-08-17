@@ -1,4 +1,4 @@
-"""
+""" 
 Phase 3 — AI Retail Intelligence Platform
 FastAPI service layer.
 
