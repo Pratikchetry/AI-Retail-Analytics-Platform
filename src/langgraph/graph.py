@@ -11,6 +11,7 @@ graph with conditional edges:
   - FORECAST/ANOMALY use the real Phase 0 models
 """
 
+import functools
 from langgraph.graph import StateGraph, END
 
 from src.langgraph.state import AgentState
@@ -135,9 +136,19 @@ def build_graph():
     return workflow.compile()
 
 
+# Cache the compiled graph so we only build it ONCE at startup.
+# This keeps all nodes, LLM clients, and embedders in memory.
+@functools.lru_cache(maxsize=1)
+def get_compiled_graph():
+    log.info("Compiling LangGraph agent for the first time...")
+    graph = build_graph()
+    log.info("LangGraph agent compiled and cached successfully.")
+    return graph
+
+
 def run_agent(question: str) -> dict:
     """One-call entry point: ask a question, get the full agent result."""
-    graph = build_graph()
+    graph = get_compiled_graph()
     log.info("Running agent for: '%s'", question[:60])
     result = graph.invoke({"question": question})
     log.info("Agent complete | critic_score=%.2f", result.get("critic_score", 0))

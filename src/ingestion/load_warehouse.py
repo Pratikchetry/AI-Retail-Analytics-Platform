@@ -48,6 +48,105 @@ ANALYTICS_PIPELINE = [
 ]
 
 
+def _split_sql_statements(sql: str) -> list[str]:
+    """Split SQL on statement semicolons while preserving quoted blocks."""
+    statements = []
+    current = []
+    in_single_quote = False
+    in_double_quote = False
+    in_line_comment = False
+    in_block_comment = False
+    dollar_tag = None
+    i = 0
+
+    while i < len(sql):
+        char = sql[i]
+        next_char = sql[i + 1] if i + 1 < len(sql) else ""
+
+        if in_line_comment:
+            current.append(char)
+            if char == "\n":
+                in_line_comment = False
+            i += 1
+            continue
+
+        if in_block_comment:
+            current.append(char)
+            if char == "*" and next_char == "/":
+                current.append(next_char)
+                in_block_comment = False
+                i += 2
+                continue
+            i += 1
+            continue
+
+        if dollar_tag:
+            if sql.startswith(dollar_tag, i):
+                current.append(dollar_tag)
+                i += len(dollar_tag)
+                dollar_tag = None
+                continue
+            current.append(char)
+            i += 1
+            continue
+
+        if not in_single_quote and not in_double_quote and char == "-" and next_char == "-":
+            current.append(char)
+            current.append(next_char)
+            in_line_comment = True
+            i += 2
+            continue
+
+        if not in_single_quote and not in_double_quote and char == "/" and next_char == "*":
+            current.append(char)
+            current.append(next_char)
+            in_block_comment = True
+            i += 2
+            continue
+
+        if not in_single_quote and not in_double_quote and char == "$":
+            end = sql.find("$", i + 1)
+            if end != -1:
+                tag = sql[i:end + 1]
+                if tag == "$$" or tag[1:-1].replace("_", "").isalnum():
+                    dollar_tag = tag
+                    current.append(tag)
+                    i = end + 1
+                    continue
+
+        if char == "'" and not in_double_quote:
+            current.append(char)
+            if in_single_quote and next_char == "'":
+                current.append(next_char)
+                i += 2
+                continue
+            in_single_quote = not in_single_quote
+            i += 1
+            continue
+
+        if char == '"' and not in_single_quote:
+            in_double_quote = not in_double_quote
+            current.append(char)
+            i += 1
+            continue
+
+        if char == ";" and not in_single_quote and not in_double_quote:
+            statement = "".join(current).strip()
+            if statement:
+                statements.append(statement)
+            current = []
+            i += 1
+            continue
+
+        current.append(char)
+        i += 1
+
+    statement = "".join(current).strip()
+    if statement:
+        statements.append(statement)
+    return statements
+
+
 def _read_staging(name: str) -> pd.DataFrame:
     path = os.path.join(STAGING_DIR, name)
     if not os.path.exists(path):
@@ -68,13 +167,12 @@ def _run_sql_file(path: str):
             if not line.lstrip().startswith("\\")
         )
     statements = [
-        s.strip() for s in raw.split(";")
-        if s.strip() and not s.strip().startswith("\\")
+        s for s in _split_sql_statements(raw)
+        if not s.lstrip().startswith("\\")
     ]
     with engine.begin() as conn:
         for stmt in statements:
-            if stmt:
-                conn.execute(text(stmt))
+            conn.exec_driver_sql(stmt)
     log.info("Executed %s", os.path.basename(path))
 
 
@@ -117,6 +215,9 @@ def clear_warehouse():
             "INSERT INTO dim_customer (customer_key, customer_id, customer_segment) "
             "VALUES (0, -1, 'Unknown')"
         ))
+        conn.execute(text(
+            "ALTER SEQUENCE IF EXISTS dim_customer_customer_key_seq RESTART WITH 1"
+        ))
     log.info("Warehouse cleared; unknown customer row re-seeded")
 
 
@@ -146,14 +247,14 @@ def build_dimensions(sales: pd.DataFrame, non_merch: pd.DataFrame):
     })
     dim_date = dim_date.rename(columns={"material_month": "month"})
     dim_date = dim_date.drop_duplicates("date_key").sort_values("date_key")
-    dim_date.to_sql("dim_date", engine, if_exists="append", index=False)
+    dim_date.to_sql("dim_date", engine, if_exists="append", index=False, method="multi")
     log.info("dim_date: %d dates", len(dim_date))
 
     # ---- dim_country ----
     dim_country = pd.DataFrame({
         "country_name": sorted(sales["country"].dropna().unique())
     })
-    dim_country.to_sql("dim_country", engine, if_exists="append", index=False)
+    dim_country.to_sql("dim_country", engine, if_exists="append", index=False, method="multi")
     log.info("dim_country: %d countries", len(dim_country))
 
     # ---- dim_product (merge merchandise flag) ----
@@ -162,7 +263,7 @@ def build_dimensions(sales: pd.DataFrame, non_merch: pd.DataFrame):
     non_merch_codes = set(non_merch["stockcode"].astype(str)) if not non_merch.empty else set()
     prods["is_merchandise"] = ~prods["stockcode"].isin(non_merch_codes)
     prods["product_type"] = prods["is_merchandise"].map({True: "merchandise", False: "non-merchandise"})
-    prods.to_sql("dim_product", engine, if_exists="append", index=False)
+    prods.to_sql("dim_product", engine, if_exists="append", index=False, method="multi")
     log.info("dim_product: %d products", len(prods))
 
     # ---- dim_customer (key=0 unknown row already re-seeded by clear_warehouse) ----
@@ -183,7 +284,7 @@ def load_fact_sales(sales: pd.DataFrame):
     log.info("Loading fact_sales ...")
 
     with engine.connect() as conn:
-        date_keys = pd.read_sql(text("SELECT date_key::text FROM dim_date"), conn)
+        date_keys = pd.read_sql(text("SELECT CAST(date_key AS text) AS date_key FROM dim_date"), conn)
         country_map = pd.read_sql(text("SELECT country_name, country_key FROM dim_country"), conn)
         prod_map = pd.read_sql(text("SELECT stockcode, product_key FROM dim_product"), conn)
         cust_map = pd.read_sql(text("SELECT customer_id, customer_key FROM dim_customer"), conn)
@@ -213,7 +314,7 @@ def load_fact_sales(sales: pd.DataFrame):
     fact["price"] = pd.to_numeric(fact["price"], errors="coerce").fillna(0)
     fact["revenue"] = pd.to_numeric(fact["revenue"], errors="coerce").fillna(0)
 
-    fact.to_sql("fact_sales", engine, if_exists="append", index=False, chunksize=10000)
+    fact.to_sql("fact_sales", engine, if_exists="append", index=False, method="multi", chunksize=2000)
     log.info("fact_sales: loaded %d rows (%d dropped for unresolved keys)", len(fact), dropped)
 
 

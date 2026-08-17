@@ -17,6 +17,7 @@ DROP TABLE IF EXISTS dim_customer CASCADE;
 DROP TABLE IF EXISTS dim_product CASCADE;
 DROP TABLE IF EXISTS dim_date CASCADE;
 DROP TABLE IF EXISTS schema_version CASCADE;
+DROP SEQUENCE IF EXISTS dim_customer_customer_key_seq CASCADE;
 
 -- ============================================================
 -- SCHEMA VERSION
@@ -73,6 +74,7 @@ VALUES (0, -1, 'Unknown');
 -- Ensure future inserts use sequence values starting after 0
 CREATE SEQUENCE IF NOT EXISTS dim_customer_customer_key_seq START 1;
 ALTER TABLE dim_customer ALTER COLUMN customer_key SET DEFAULT nextval('dim_customer_customer_key_seq');
+ALTER SEQUENCE dim_customer_customer_key_seq OWNED BY dim_customer.customer_key;
 SELECT setval('dim_customer_customer_key_seq', COALESCE((SELECT MAX(customer_key) FROM dim_customer), 0) + 1, false);
 
 -- ============================================================

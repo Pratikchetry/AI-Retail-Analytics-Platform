@@ -4,6 +4,7 @@ FastAPI service layer.
 
 Exposes the LangGraph agent brain + models as a clean REST API:
   POST /ask       — natural language question -> full agent response
+  POST /chat      — streaming endpoint for Vercel AI SDK (Next.js)
   POST /forecast  — direct model forecast (bypass router)
   POST /ingest    — re-run ingestion (CSV -> warehouse)
   GET  /health    — service + dependency health
@@ -14,9 +15,13 @@ Run: uvicorn src.app.api:app --reload --port 8000
 
 import os
 import json
+import asyncio
+from typing import List
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 from sqlalchemy import text
 import pandas as pd
 
@@ -37,7 +42,7 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# Allow the Streamlit UI (Phase 4) to call this API
+# Allow the Next.js UI (Vercel) to call this API
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -70,6 +75,42 @@ def ask(req: AskRequest):
         )
     except Exception as e:
         log.error("/ask failed: %s", str(e)[:300])
+        raise HTTPException(status_code=500, detail=str(e)[:300])
+
+
+# ------------------------------------------------------------------
+# POST /chat — streaming endpoint for Vercel AI SDK
+# ------------------------------------------------------------------
+class ChatMessage(BaseModel):
+    role: str
+    content: str
+
+class ChatRequest(BaseModel):
+    messages: List[ChatMessage]
+
+@app.post("/chat")
+async def chat(req: ChatRequest):
+    """Streaming endpoint for Vercel AI SDK (Next.js frontend)."""
+    try:
+        from src.langgraph.graph import run_agent
+        
+        # Extract the latest user question
+        question = req.messages[-1].content
+        log.info("API /chat: '%s'", question[:80])
+        
+        result = run_agent(question)
+        answer = result.get("answer", "I could not find an answer.")
+        
+        async def stream_generator():
+            # Simulate streaming word-by-word for the Vercel AI SDK
+            words = answer.split()
+            for word in words:
+                yield f"{word} "
+                await asyncio.sleep(0.05) # Small delay for typing effect
+                
+        return StreamingResponse(stream_generator(), media_type="text/plain")
+    except Exception as e:
+        log.error("/chat failed: %s", str(e)[:300])
         raise HTTPException(status_code=500, detail=str(e)[:300])
 
 

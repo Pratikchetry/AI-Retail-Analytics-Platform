@@ -12,7 +12,6 @@ from src.langgraph.state import AgentState
 
 log = get_logger(__name__)
 
-
 def reasoning_node(state: AgentState) -> dict:
     """Synthesize a business answer from SQL result + context."""
     question = state["question"]
@@ -21,8 +20,19 @@ def reasoning_node(state: AgentState) -> dict:
 
     log.info("Reasoning for: '%s'", question[:60])
 
+    # Format the SQL result for the LLM
+    sql_result_str = None
+    if isinstance(rows, str) and rows in ("NO_SQL_REQUIRED", "INFORMATION_NOT_AVAILABLE"):
+        # If SQL was skipped, pass None so the agent relies on the knowledge base
+        sql_result_str = None
+    elif hasattr(rows, "to_string"):
+        # If it's a pandas DataFrame, format it nicely
+        sql_result_str = rows.to_string(index=False)
+    elif rows:
+        sql_result_str = str(rows)
+
     reasoning_agent = BusinessReasoningAgent()
-    result = reasoning_agent.reason(question, context, sql_result=rows)
+    result = reasoning_agent.reason(question, context, sql_result=sql_result_str)
 
     log.info("Reasoning answer: %s", result.answer[:100] if result.answer else "EMPTY")
 

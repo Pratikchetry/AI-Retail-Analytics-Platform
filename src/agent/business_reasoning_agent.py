@@ -25,7 +25,7 @@ class BusinessReasoningAgent:
         sql_result: str = None
     ) -> BusinessReasoningResult:
 
-        sql_section = ""
+        sql_section = "NO SQL EXECUTED."
         if sql_result and sql_result not in ("NO_SQL_REQUIRED", "INFORMATION_NOT_AVAILABLE"):
             sql_section = f"SQL EXECUTION RESULT (GROUND TRUTH — USE THIS FIRST):\n{sql_result}\n\n"
 
@@ -37,13 +37,16 @@ EVIDENCE HIERARCHY:
 2. KNOWLEDGE BASE = context only. Use to explain, never to override.
 3. If SQL empty/None, use knowledge base as primary.
 
-{sql_section}KNOWLEDGE BASE (CONTEXT ONLY):
+{sql_section}
+
+KNOWLEDGE BASE (CONTEXT ONLY):
 {context}
 
 QUESTION: {question}
 
 CRITICAL INSTRUCTIONS:
 - If the SQL EXECUTION RESULT contains data, you MUST use it as your ANSWER.
+- If the SQL EXECUTION RESULT is "NO SQL EXECUTED", you MUST find the answer in the KNOWLEDGE BASE.
 - Do NOT say "the SQL result does not answer the question". The SQL was written by an expert.
 - If the SQL returns a single row, that row is the answer.
 - Never invent numbers. All money is GBP (£).

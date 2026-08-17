@@ -1,13 +1,11 @@
-# src/utils/config.py
-
 from dotenv import load_dotenv
 import os
 
 load_dotenv()
 
 class Settings:
-    # Renamed from DATABASE_URL to prevent Chainlit from hijacking it
-    DATABASE_URL = os.getenv("WAREHOUSE_DB_URL")
+    # Standardized to DATABASE_URL (Chainlit is removed, so no more hijacking)
+    DATABASE_URL = os.getenv("DATABASE_URL")
 
     LLM_PROVIDER = os.getenv("LLM_PROVIDER", "groq")
 
