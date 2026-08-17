@@ -50,6 +50,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ------------------------------------------------------------------
+# Startup Event: Pre-warm the LangGraph agent & ONNX model
+# ------------------------------------------------------------------
+@app.on_event("startup")
+def startup_event():
+    """Pre-warm the LangGraph agent on startup so the first request is fast."""
+    try:
+        log.info("Pre-warming LangGraph agent...")
+        from src.langgraph.graph import get_compiled_graph
+        get_compiled_graph()
+        log.info("LangGraph agent pre-warmed successfully.")
+    except Exception as e:
+        log.warning(f"Failed to pre-warm agent: {e}")
+
 
 # ------------------------------------------------------------------
 # POST /ask — the main endpoint
