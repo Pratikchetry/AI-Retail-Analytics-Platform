@@ -10,5 +10,3 @@ groq>=1.4.0
 httpx
 fastapi
 uvicorn
-onnxruntime
-tokenizers

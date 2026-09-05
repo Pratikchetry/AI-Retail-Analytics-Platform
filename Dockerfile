@@ -9,13 +9,6 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Download and extract the ONNX model directly into the app folder during build
-RUN mkdir -p /app/onnx_model && \
-    curl -L https://chroma-onnx-models.s3.amazonaws.com/all-MiniLM-L6-v2/onnx.tar.gz \
-    -o /tmp/onnx.tar.gz && \
-    tar -xzf /tmp/onnx.tar.gz -C /app/onnx_model && \
-    rm /tmp/onnx.tar.gz
-
 COPY . .
 
 ENV PYTHONPATH=/app
