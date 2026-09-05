@@ -15,18 +15,30 @@ class LocalTextEmbedder:
         import onnxruntime
         from tokenizers import Tokenizer
         
-        # The tarball extracts into a subfolder named 'onnx'
-        model_path = "/app/onnx_model/onnx/model.onnx"
-        tokenizer_path = "/app/onnx_model/onnx/tokenizer.json"
+        # Check multiple possible paths for the model (Render vs Local Mac)
+        possible_paths = [
+            "/app/onnx_model/onnx", # Render/Docker path
+            "./onnx_model/onnx",    # Local Mac path
+            os.path.expanduser("~/.cache/chroma/onnx_models/all-MiniLM-L6-v2/onnx") # Chroma default cache
+        ]
         
-        if not os.path.exists(model_path) or not os.path.exists(tokenizer_path):
-            raise RuntimeError(f"ONNX model files not found. Checked path: /app/onnx_model/onnx/")
-            
+        model_dir = None
+        for path in possible_paths:
+            if os.path.exists(os.path.join(path, "model.onnx")):
+                model_dir = path
+                break
+                
+        if not model_dir:
+            raise RuntimeError(f"ONNX model files not found. Checked paths: {possible_paths}")
+                
+        model_path = os.path.join(model_dir, "model.onnx")
+        tokenizer_path = os.path.join(model_dir, "tokenizer.json")
+        
         self.session = onnxruntime.InferenceSession(model_path)
         self.tokenizer = Tokenizer.from_file(tokenizer_path)
         self.tokenizer.enable_padding(length=128)
         self.tokenizer.enable_truncation(max_length=128)
-        log.info("Direct ONNX Embedder loaded successfully.")
+        log.info(f"Direct ONNX Embedder loaded successfully from {model_dir}")
 
     def encode_text(self, text: str) -> List[float]:
         """Encodes a single string into a vector."""
@@ -44,10 +56,13 @@ class LocalTextEmbedder:
         encodings = self.tokenizer.encode_batch(texts)
         input_ids = np.array([e.ids for e in encodings], dtype=np.int64)
         attention_mask = np.array([e.attention_mask for e in encodings], dtype=np.int64)
+        token_type_ids = np.array([e.type_ids for e in encodings], dtype=np.int64)
         
+        # BERT-based models require all three inputs
         inputs = {
             "input_ids": input_ids,
-            "attention_mask": attention_mask
+            "attention_mask": attention_mask,
+            "token_type_ids": token_type_ids
         }
         
         outputs = self.session.run(None, inputs)
