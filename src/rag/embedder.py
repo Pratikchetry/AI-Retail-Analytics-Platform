@@ -1,36 +1,48 @@
 """
 Phase 5 — AI Retail Intelligence Platform
-ONNX Text Embedding Layer.
-Uses ONNX Runtime to save 500MB of RAM (no PyTorch needed).
+API-based Text Embedding Layer.
+Uses Hugging Face Inference API to save 200MB of RAM (no ONNX needed).
 """
-
-import functools
+import os
+import time
+import httpx
 from typing import List
+from dotenv import load_dotenv
 from src.utils.logger import get_logger
 
+load_dotenv()
 log = get_logger(__name__)
 
-@functools.lru_cache(maxsize=1)
-def _load_onnx_model():
-    """Load the ONNX model exactly once per process (uses ~30MB RAM)."""
-    try:
-        from chromadb.utils.embedding_functions import ONNXMiniLM_L6_V2
-        log.info("Loading ONNX Embedder (all-MiniLM-L6-v2)...")
-        return ONNXMiniLM_L6_V2()
-    except Exception as e:
-        log.error(f"Failed to load ONNX model: {e}")
-        raise
-
 class LocalTextEmbedder:
-    def __init__(self, model_name: str = "all-MiniLM-L6-v2"):
-        # Model is loaded via cache
-        self.model = _load_onnx_model()
+    def __init__(self, model_name: str = "sentence-transformers/all-MiniLM-L6-v2"):
+        self.api_url = f"https://api-inference.huggingface.co/models/{model_name}"
+        self.headers = {"Authorization": f"Bearer {os.getenv('HF_TOKEN')}"}
+        log.info(f"Embedder initialized using HF Inference API: {model_name}")
+
+    def _call_api(self, payload):
+        """Helper to call the Hugging Face API with basic retry logic."""
+        for attempt in range(3):
+            try:
+                response = httpx.post(self.api_url, headers=self.headers, json=payload, timeout=15.0)
+                if response.status_code == 503:
+                    log.warning("HF Embedding API cold booting, retrying in 3 seconds...")
+                    time.sleep(3)
+                    continue
+                response.raise_for_status()
+                return response.json()
+            except Exception as e:
+                log.error(f"HF Embedding API call failed: {e}")
+                time.sleep(1)
+        raise RuntimeError("Hugging Face Embedding API failed after 3 retries.")
 
     def encode_text(self, text: str) -> List[float]:
-        """Encodes a single conversational string into a flat numerical vector."""
-        # ChromaDB's ONNX function expects a list and returns a list of lists
-        return self.model([text])[0]
+        """Encodes a single string into a vector via API."""
+        data = self._call_api({"inputs": text})
+        if isinstance(data, list) and len(data) > 0 and isinstance(data[0], list):
+            return data[0]
+        return data
 
     def encode_batch(self, texts: List[str]) -> List[List[float]]:
-        """Encodes an array of schema documentation strings in parallel."""
-        return self.model(texts)
+        """Encodes an array of strings in parallel via API."""
+        data = self._call_api({"inputs": texts})
+        return data

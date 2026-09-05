@@ -12,5 +12,3 @@ httpx
 fastapi
 uvicorn
 asyncpg
-onnxruntime
-tokenizers
