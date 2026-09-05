@@ -15,11 +15,12 @@ class LocalTextEmbedder:
         import onnxruntime
         from tokenizers import Tokenizer
         
-        model_path = "/app/onnx_model/model.onnx"
-        tokenizer_path = "/app/onnx_model/tokenizer.json"
+        # The tarball extracts into a subfolder named 'onnx'
+        model_path = "/app/onnx_model/onnx/model.onnx"
+        tokenizer_path = "/app/onnx_model/onnx/tokenizer.json"
         
         if not os.path.exists(model_path) or not os.path.exists(tokenizer_path):
-            raise RuntimeError(f"ONNX model files not found in /app/onnx_model/. Contents: {os.listdir('/app/onnx_model/')}")
+            raise RuntimeError(f"ONNX model files not found. Checked path: /app/onnx_model/onnx/")
             
         self.session = onnxruntime.InferenceSession(model_path)
         self.tokenizer = Tokenizer.from_file(tokenizer_path)
@@ -56,4 +57,5 @@ class LocalTextEmbedder:
         sum_embeddings = np.sum(token_embeddings * input_mask_expanded, 1)
         sum_mask = np.clip(input_mask_expanded.sum(1), 1e-9, None)
         embeddings = sum_embeddings / sum_mask
+        
         return embeddings[0] if len(embeddings) == 1 else embeddings
