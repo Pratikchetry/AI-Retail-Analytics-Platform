@@ -13,7 +13,7 @@ load_dotenv()
 log = get_logger(__name__)
 
 class LocalTextEmbedder:
-    def __init__(self, model_name: str = "models/text-embedding-004"):
+    def __init__(self, model_name: str = "models/embedding-001"):
         self.api_key = os.getenv("GEMINI_API_KEY")
         self.model = model_name
         self.api_url = f"https://generativelanguage.googleapis.com/v1beta/{self.model}:embedContent?key={self.api_key}"
