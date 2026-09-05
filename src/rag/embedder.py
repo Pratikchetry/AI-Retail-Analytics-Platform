@@ -26,19 +26,19 @@ class LocalTextEmbedder:
                 response = httpx.post(self.api_url, headers=self.headers, json={"inputs": text}, timeout=30.0)
                 
                 if response.status_code == 503:
-                    log.warning("HF Embedding API cold booting, retrying in 5 seconds...", flush=True)
+                    log.warning("HF Embedding API cold booting, retrying in 5 seconds...")
                     time.sleep(5)
                     continue
                     
                 # Explicitly log the error if it fails
                 if response.status_code != 200:
-                    log.error(f"HF API Error {response.status_code}: {response.text}", flush=True)
+                    log.error(f"HF API Error {response.status_code}: {response.text}")
                     response.raise_for_status()
                     
                 return response.json()
                 
             except Exception as e:
-                log.error(f"HF Embedding API call failed: {e}", flush=True)
+                log.error(f"HF Embedding API call failed: {e}")
                 time.sleep(1)
                 
         raise RuntimeError("Hugging Face Embedding API failed after 3 retries.")
