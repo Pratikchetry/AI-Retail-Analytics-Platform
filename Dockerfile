@@ -12,8 +12,14 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Pre-download the ONNX model to prevent runtime OOM crashes on Render
-RUN python -c "from chromadb.utils.embedding_functions import ONNXMiniLM_L6_V2; ONNXMiniLM_L6_V2()"
+# Manually download and extract the ONNX model to the exact cache path ChromaDB expects
+# This prevents the 79MB download/extraction memory spike at runtime (fixes Render OOM crash)
+RUN mkdir -p /root/.cache/chroma/onnx_models/all-MiniLM-L6-v2/ && \
+    curl -L https://chroma-onnx-models.s3.amazonaws.com/all-MiniLM-L6-v2/onnx.tar.gz \
+    -o /root/.cache/chroma/onnx_models/all-MiniLM-L6-v2/onnx.tar.gz && \
+    tar -xzf /root/.cache/chroma/onnx_models/all-MiniLM-L6-v2/onnx.tar.gz \
+    -C /root/.cache/chroma/onnx_models/all-MiniLM-L6-v2/ && \
+    rm /root/.cache/chroma/onnx_models/all-MiniLM-L6-v2/onnx.tar.gz
 
 # Copy the rest of the application code
 COPY . .
