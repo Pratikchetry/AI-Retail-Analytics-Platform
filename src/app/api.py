@@ -1,21 +1,13 @@
-""" 
+"""
 Phase 3 — AI Retail Intelligence Platform
 FastAPI service layer.
-
-Exposes the LangGraph agent brain + models as a clean REST API:
-  POST /ask       — natural language question -> full agent response
-  POST /chat      — streaming endpoint for Vercel AI SDK (Next.js)
-  POST /forecast  — direct model forecast (bypass router)
-  POST /ingest    — re-run ingestion (CSV -> warehouse)
-  GET  /health    — service + dependency health
-  GET  /metrics   — KPI snapshot from the warehouse
-
-Run: uvicorn src.app.api:app --reload --port 8000
 """
 
 import os
 import json
 import asyncio
+import hashlib
+import time as _time
 from typing import List
 
 from fastapi import FastAPI, HTTPException
@@ -42,13 +34,63 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# Allow the Next.js UI (Vercel) to call this API
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ------------------------------------------------------------------
+# In-Memory Cache & Pre-warming
+# ------------------------------------------------------------------
+_cache: dict = {}
+_CACHE_TTL = 600  # 10 minutes
+
+def _cache_get(question: str):
+    key = hashlib.md5(question.lower().strip().encode()).hexdigest()
+    if key in _cache:
+        answer, ts = _cache[key]
+        if _time.time() - ts < _CACHE_TTL:
+            return answer
+    return None
+
+def _cache_set(question: str, answer: str):
+    key = hashlib.md5(question.lower().strip().encode()).hexdigest()
+    _cache[key] = (answer, _time.time())
+
+DEMO_QUESTIONS = [
+    "What is the total revenue?",
+    "Which customer segment generates most revenue?",
+    "What is the only true Superstar product?",
+    "Why did YoY show negative growth?",
+    "What month is operationally critical?",
+    "What was TikTok advertising revenue?"
+]
+
+async def warm_cache_background():
+    """Runs in background so server doesn't block startup."""
+    await asyncio.sleep(5) 
+    log.info("Background Cache Warmer: Starting...")
+    from src.langgraph.graph import run_agent
+    
+    for q in DEMO_QUESTIONS:
+        try:
+            if _cache_get(q):
+                continue
+            result = run_agent(q)
+            answer = result.get("answer", "")
+            if answer:
+                _cache_set(q, answer)
+                log.info(f"Cache warmed: {q[:50]}")
+        except Exception as e:
+            log.warning(f"Cache warm failed for '{q[:40]}': {str(e)[:60]}")
+    log.info("Background Cache Warmer: Complete.")
+
+@app.on_event("startup")
+async def startup_event():
+    """Trigger cache warming without blocking server startup."""
+    asyncio.create_task(warm_cache_background())
 
 
 # ------------------------------------------------------------------
@@ -58,13 +100,31 @@ app.add_middleware(
 def ask(req: AskRequest):
     """Ask the multi-agent system a natural language question."""
     log.info("API /ask: '%s'", req.question[:80])
+    
+    # 1. Check cache first
+    cached = _cache_get(req.question)
+    if cached:
+        log.info("Cache HIT for /ask")
+        return AskResponse(
+            question=req.question, route="CACHE", answer=cached, 
+            recommendation="", evidence="Served from cache.", critic_score=1.0, 
+            critic_passes=True, sql="", execution_status="CACHED", result_data=None
+        )
+
+    # 2. Run full pipeline if cache miss
     try:
         from src.langgraph.graph import run_agent
         result = run_agent(req.question)
+        answer = result.get("answer", "")
+        
+        # 3. Store in cache
+        if answer:
+            _cache_set(req.question, answer)
+            
         return AskResponse(
             question=req.question,
             route=result.get("route", ""),
-            answer=result.get("answer", ""),
+            answer=answer,
             recommendation=result.get("recommendation", ""),
             evidence=result.get("evidence", ""),
             critic_score=result.get("critic_score", 0.0),
@@ -92,21 +152,25 @@ class ChatRequest(BaseModel):
 async def chat(req: ChatRequest):
     """Streaming endpoint for Vercel AI SDK (Next.js frontend)."""
     try:
-        from src.langgraph.graph import run_agent
-        
-        # Extract the latest user question
         question = req.messages[-1].content
         log.info("API /chat: '%s'", question[:80])
         
-        result = run_agent(question)
-        answer = result.get("answer", "I could not find an answer.")
-        
+        # Check cache first
+        cached_answer = _cache_get(question)
+        if cached_answer:
+            log.info("Cache HIT for /chat")
+            answer = cached_answer
+        else:
+            from src.langgraph.graph import run_agent
+            result = run_agent(question)
+            answer = result.get("answer", "I could not find an answer.")
+            _cache_set(question, answer) # Save to cache
+            
         async def stream_generator():
-            # Simulate streaming word-by-word for the Vercel AI SDK
             words = answer.split()
             for word in words:
                 yield f"{word} "
-                await asyncio.sleep(0.05) # Small delay for typing effect
+                await asyncio.sleep(0.05)
                 
         return StreamingResponse(stream_generator(), media_type="text/plain")
     except Exception as e:

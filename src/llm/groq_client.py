@@ -1,39 +1,23 @@
-import time
-
-from groq import Groq
-from dotenv import load_dotenv
 import os
+from dotenv import load_dotenv
+from groq import Groq
+from src.utils.logger import get_logger
 
 load_dotenv()
-
+log = get_logger(__name__)
 
 class GroqClient:
+    def __init__(self, model: str = "llama-3.3-70b-versatile"):
+        self.client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+        self.model = model
+        log.info(f"GroqClient initialized with model: {self.model}")
 
-    def __init__(self):
-
-        self.client = Groq(
-            api_key=os.getenv("GROQ_API_KEY")
-        )
-
-        self.model = "llama-3.3-70b-versatile"
     def generate_response(self, prompt: str) -> str:
-        max_retries = 5
-        for attempt in range(max_retries):
-            try:
-                response = self.client.chat.completions.create(
-                    model=self.model,
-                    messages=[{"role": "user", "content": prompt}],
-                    timeout=30.0  # 30 second timeout
-                )
-                return response.choices[0].message.content
-            except Exception as e:
-                msg = str(e).lower()
-                if "429" in msg or "rate limit" in msg or "too many requests" in msg:
-                    wait = min(2 ** attempt * 3, 60)
-                    time.sleep(wait)
-                    continue
-                if attempt < max_retries - 1:
-                    time.sleep(2)
-                    continue
-                raise
-        raise RuntimeError("Groq rate limit: max retries exceeded")
+        try:
+            chat_completion = self.client.chat.completions.create(
+                messages=[{"role": "user", "content": prompt}],
+                model=self.model,
+            )
+            return chat_completion.choices[0].message.content
+        except Exception as e:
+            raise RuntimeError(f"Groq API Error: {str(e)}")
