@@ -1,44 +1,52 @@
 """
 Phase 5 — AI Retail Intelligence Platform
 Direct ONNX Text Embedding Layer.
-Bypasses ChromaDB's downloader to prevent OOM crashes on Render.
+Uses caching to ensure the model is only loaded ONCE into RAM.
 """
 import os
+import functools
 import numpy as np
 from typing import List
 from src.utils.logger import get_logger
 
 log = get_logger(__name__)
 
+@functools.lru_cache(maxsize=1)
+def _load_onnx_model():
+    """Load the ONNX model exactly once per process."""
+    import onnxruntime
+    from tokenizers import Tokenizer
+    
+    possible_paths = [
+        "/app/onnx_model/onnx", 
+        "./onnx_model/onnx",    
+        os.path.expanduser("~/.cache/chroma/onnx_models/all-MiniLM-L6-v2/onnx") 
+    ]
+    
+    model_dir = None
+    for path in possible_paths:
+        if os.path.exists(os.path.join(path, "model.onnx")):
+            model_dir = path
+            break
+            
+    if not model_dir:
+        raise RuntimeError(f"ONNX model files not found. Checked paths: {possible_paths}")
+            
+    model_path = os.path.join(model_dir, "model.onnx")
+    tokenizer_path = os.path.join(model_dir, "tokenizer.json")
+    
+    session = onnxruntime.InferenceSession(model_path)
+    tokenizer = Tokenizer.from_file(tokenizer_path)
+    tokenizer.enable_padding(length=128)
+    tokenizer.enable_truncation(max_length=128)
+    log.info(f"Direct ONNX Embedder loaded successfully from {model_dir}")
+    return session, tokenizer
+
 class LocalTextEmbedder:
     def __init__(self):
-        import onnxruntime
-        from tokenizers import Tokenizer
-        
-        # Check multiple possible paths for the model
-        possible_paths = [
-            "/app/onnx_model/onnx", 
-            "./onnx_model/onnx",    
-            os.path.expanduser("~/.cache/chroma/onnx_models/all-MiniLM-L6-v2/onnx") 
-        ]
-        
-        model_dir = None
-        for path in possible_paths:
-            if os.path.exists(os.path.join(path, "model.onnx")):
-                model_dir = path
-                break
-                
-        if not model_dir:
-            raise RuntimeError(f"ONNX model files not found. Checked paths: {possible_paths}")
-                
-        model_path = os.path.join(model_dir, "model.onnx")
-        tokenizer_path = os.path.join(model_dir, "tokenizer.json")
-        
-        self.session = onnxruntime.InferenceSession(model_path)
-        self.tokenizer = Tokenizer.from_file(tokenizer_path)
-        self.tokenizer.enable_padding(length=128)
-        self.tokenizer.enable_truncation(max_length=128)
-        log.info(f"Direct ONNX Embedder loaded successfully from {model_dir}")
+        # This will only actually load the model the first time it is called.
+        # All subsequent calls will reuse the cached session and tokenizer.
+        self.session, self.tokenizer = _load_onnx_model()
 
     def encode_text(self, text: str) -> List[float]:
         """Encodes a single string into a vector."""
