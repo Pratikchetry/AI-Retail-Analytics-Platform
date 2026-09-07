@@ -40,6 +40,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ------------------------------------------------------------------
 # In-Memory Cache (No background warmer to avoid OOM)
 # ------------------------------------------------------------------
 _cache: dict = {}
@@ -56,39 +58,6 @@ def _cache_get(question: str):
 def _cache_set(question: str, answer: str):
     key = hashlib.md5(question.lower().strip().encode()).hexdigest()
     _cache[key] = (answer, _time.time())
-
-DEMO_QUESTIONS = [
-    "What is the total revenue?",
-    "Which customer segment generates most revenue?",
-    "What is the only true Superstar product?",
-    "Why did YoY show negative growth?",
-    "What month is operationally critical?",
-    "What was TikTok advertising revenue?"
-]
-
-async def warm_cache_background():
-    """Runs in background so server doesn't block startup."""
-    await asyncio.sleep(5) 
-    log.info("Background Cache Warmer: Starting...")
-    from src.langgraph.graph import run_agent
-    
-    for q in DEMO_QUESTIONS:
-        try:
-            if _cache_get(q):
-                continue
-            result = run_agent(q)
-            answer = result.get("answer", "")
-            if answer:
-                _cache_set(q, answer)
-                log.info(f"Cache warmed: {q[:50]}")
-        except Exception as e:
-            log.warning(f"Cache warm failed for '{q[:40]}': {str(e)[:60]}")
-    log.info("Background Cache Warmer: Complete.")
-
-@app.on_event("startup")
-async def startup_event():
-    """Trigger cache warming without blocking server startup."""
-    asyncio.create_task(warm_cache_background())
 
 
 # ------------------------------------------------------------------
