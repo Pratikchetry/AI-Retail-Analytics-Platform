@@ -40,9 +40,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# ------------------------------------------------------------------
-# In-Memory Cache & Pre-warming
+# In-Memory Cache (No background warmer to avoid OOM)
 # ------------------------------------------------------------------
 _cache: dict = {}
 _CACHE_TTL = 600  # 10 minutes
