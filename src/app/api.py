@@ -42,6 +42,14 @@ app.add_middleware(
 )
 
 # ------------------------------------------------------------------
+# Root route for Azure Health Ping
+# ------------------------------------------------------------------
+@app.get("/")
+def read_root():
+    """Azure App Service pings this route to check if the container is alive."""
+    return {"status": "ok", "message": "Retail Intelligence API is running"}
+
+# ------------------------------------------------------------------
 # In-Memory Cache (No background warmer to avoid OOM)
 # ------------------------------------------------------------------
 _cache: dict = {}
