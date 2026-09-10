@@ -40,3 +40,7 @@ backup.sql
 
 # Chainlit
 .chainlit/
+
+# Next.js Frontend
+retail-ai-frontend/node_modules/
+retail-ai-frontend/.next/

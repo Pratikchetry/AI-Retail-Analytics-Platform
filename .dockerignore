@@ -12,3 +12,4 @@ node_modules
 project_root
 project_root_git_backup
 .ipynb_checkpoints
+.env

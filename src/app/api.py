@@ -7,6 +7,7 @@ import os
 import json
 import asyncio
 import hashlib
+import importlib
 import time as _time
 from typing import List
 
@@ -14,8 +15,14 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from sqlalchemy import text
 import pandas as pd
+
+try:
+    text = importlib.import_module("sqlalchemy").text
+except Exception:
+    def text(statement: str):
+        """Fallback when SQLAlchemy is unavailable in an editor/runtime environment."""
+        return statement
 
 from src.utils.db import engine
 from src.utils.logger import get_logger
@@ -134,14 +141,34 @@ async def chat(req: ChatRequest):
         cached_answer = _cache_get(question)
         if cached_answer:
             log.info("Cache HIT for /chat")
-            answer = cached_answer
-        else:
-            from src.langgraph.graph import run_agent
-            result = run_agent(question)
-            answer = result.get("answer", "I could not find an answer.")
-            _cache_set(question, answer) # Save to cache
+            async def stream_cached():
+                words = cached_answer.split()
+                for word in words:
+                    yield f"{word} "
+                    await asyncio.sleep(0.05)
+            return StreamingResponse(stream_cached(), media_type="text/plain")
             
+        # Run full pipeline if cache miss
+        from src.langgraph.graph import run_agent
+        
+        loop = asyncio.get_event_loop()
+        
+        # Start the heavy synchronous LangGraph agent in a background thread
+        future = loop.run_in_executor(None, run_agent, question)
+        
         async def stream_generator():
+            # 1. While the agent is thinking, yield spaces to keep the connection alive 
+            #    (bypasses Azure 60s idle timeout)
+            while not future.done():
+                yield " "  # Keep-alive byte
+                await asyncio.sleep(3)  # Wait 3 seconds, then send another
+                
+            # 2. Agent is done! Get the result
+            result = future.result()
+            answer = result.get("answer", "I could not find an answer.")
+            _cache_set(question, answer) # Save to cache for next time
+            
+            # 3. Yield the actual answer word-by-word
             words = answer.split()
             for word in words:
                 yield f"{word} "
