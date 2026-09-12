@@ -1,4 +1,14 @@
-from dotenv import load_dotenv
+try:
+    from dotenv import load_dotenv  # type: ignore[import-not-found]
+except ImportError:
+    def load_dotenv(*args, **kwargs):
+        """Fallback when python-dotenv is not installed.
+
+        This keeps the configuration module importable in minimal
+        environments while leaving environment variable loading a no-op.
+        """
+        return False
+
 import os
 
 load_dotenv()
