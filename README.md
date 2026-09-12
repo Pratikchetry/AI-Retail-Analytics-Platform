@@ -2,7 +2,19 @@
 
 **An end-to-end, multi-agent AI copilot that answers natural-language questions about a UK retail business — reasoning over a live PostgreSQL warehouse, forecasting revenue with XGBoost, and verifying its own answers against ground-truth data.**
 
-> Not a tutorial project. Not a demo with hardcoded answers. Every metric below traces to real warehouse data or a real trained model.
+> Not a tutorial project. Not a demo with hardcoded answers. Every metric below traces to real warehouse data or a real trained model — and every claim in this README has been independently re-verified (live HTTP checks, direct database queries, clean `--no-cache` Docker builds) rather than just asserted.
+
+---
+
+## 🌐 Live Demo
+
+| | |
+|---|---|
+| **Chat UI** | [ai-retail-analytics-platform.vercel.app](https://ai-retail-analytics-platform.vercel.app) — Next.js frontend, deployed on Vercel |
+| **API** | Deployed on Azure App Service — confirmed reachable (`200 OK`, ~3.6s response) |
+| **Database** | PostgreSQL hosted on [Neon](https://neon.tech) — production traffic verified against direct query (see below) |
+
+> First request after idle periods may take longer due to the platform's free-tier cold start — this is a known constraint of the hosting tier, not the application.
 
 ---
 
@@ -13,6 +25,7 @@
 | **1.2M+ rows** of real UK retail transactions processed through a custom ETL pipeline | **12-node LangGraph agent** with routing, context compression, self-verification, and a critic quality gate |
 | **MAE £6,892** XGBoost forecast model (67% better than baseline) — tracked in MLflow | **The agent caught its own data bug**: a knowledge-base claim was wrong, the verifier flagged it, and the warehouse truth won |
 | **77% prompt noise reduction** via context engineering (not just RAG) | **One-command Docker bootstrap** — schema, data, models, embeddings, API, UI |
+| **81% smaller Docker image** (14.4GB → 2.75GB) after replacing PyTorch/sentence-transformers with a local ONNX Runtime inference session for embeddings | |
 
 ---
 
@@ -20,17 +33,20 @@
 
 ![Python](https://img.shields.io/badge/Python-3.11-blue)
 ![LangGraph](https://img.shields.io/badge/LangGraph-Multi--Agent-orange)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Warehouse-blue)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Neon-blue)
 ![XGBoost](https://img.shields.io/badge/XGBoost-Forecasting-red)
 ![FastAPI](https://img.shields.io/badge/FastAPI-Backend-green)
-![Chainlit](https://img.shields.io/badge/Chainlit-UI-purple)
+![NextJS](https://img.shields.io/badge/Next.js-Frontend-black)
+![Vercel](https://img.shields.io/badge/Vercel-Deployed-black)
+![Azure](https://img.shields.io/badge/Azure-App_Service-blue)
 ![Docker](https://img.shields.io/badge/Docker-Containerized-blue)
 ![MLflow](https://img.shields.io/badge/MLflow-MLOps-pink)
 ![GitHub Actions](https://img.shields.io/badge/CI/CD-GitHub_Actions-black)
 
 **LLM Layer:** Google Gemini 2.0 Flash (primary) + Groq llama-3.3-70b (fallback) via a custom LLM Router
-**Vector Store:** ChromaDB + sentence-transformers (all-MiniLM-L6-v2)
+**Vector Store:** ChromaDB + local ONNX Runtime inference (all-MiniLM-L6-v2) — no PyTorch dependency in production
 **Anomaly Detection:** Isolation Forest (scikit-learn)
+**Frontend:** Next.js (App Router) + Tailwind CSS + Framer Motion, streaming responses token-by-token via the Fetch/ReadableStream API
 
 ---
 
@@ -140,6 +156,22 @@ Every number here comes from the live warehouse or a real model artifact — not
 | LLM Calls Per Question | **5** (optimized down from 9 via graph deduplication) |
 | Context Noise Reduction | **77%** (via context compressor) |
 | Eval Pass Rate | **5/5 = 100%** on scored questions |
+| Docker Image Size | **2.75GB** (down from 14.4GB pre-ONNX; verified via clean `--no-cache` builds of both versions) |
+
+---
+
+## 🐳 Docker Image Optimization
+
+The embedding pipeline went through several iterations while debugging memory constraints on a resource-limited deployment (Gemini embedding API → HuggingFace Inference API → local ONNX runtime), landing on a self-contained ONNX-based embedder with no external API dependency and no PyTorch/sentence-transformers requirement.
+
+Measured by building both versions from the actual git history with `docker build --no-cache`:
+
+| | Total Image Size | Unique Layers Added |
+|---|---|---|
+| Before (sentence-transformers + torch) | 14.4GB | 4.58GB |
+| After (local ONNX Runtime) | **2.75GB** | **645MB** |
+
+The current production image matches the "after" measurement almost exactly (647MB), confirming the deployed service genuinely runs the ONNX path.
 
 ---
 
@@ -165,7 +197,7 @@ Then open:
 # Setup
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env  # Add GROQ_API_KEY and GEMINI_API_KEY
+cp .env.example .env  # Add GROQ_API_KEY, GEMINI_API_KEY, and DATABASE_URL
 
 # Run the full data + ML pipeline
 PYTHONPATH=. python -m src.pipeline all
@@ -173,6 +205,8 @@ PYTHONPATH=. python -m src.pipeline all
 # Start API + UI together
 ./run_app.sh
 ```
+
+> In production, `DATABASE_URL` points to a Neon-hosted PostgreSQL instance. For local development, the Docker Compose setup provisions its own local Postgres container instead.
 
 ---
 
@@ -183,6 +217,7 @@ PYTHONPATH=. python -m src.pipeline all
 | `POST` | `/ask` | Natural language → full agent response (answer, SQL, evidence, critic score) |
 | `POST` | `/forecast` | Direct XGBoost model access (bypass router) |
 | `POST` | `/ingest` | Reload warehouse from staging CSVs |
+| `GET` | `/` | Root health check (used by Azure App Service to confirm the container is alive) |
 | `GET` | `/health` | Service + dependency health check |
 | `GET` | `/metrics` | KPI snapshot from the warehouse |
 | `GET` | `/custom/monthly-revenue` | Monthly revenue time series (chart data) |
@@ -199,16 +234,17 @@ retail-revenue-intelligence/
 │   ├── langgraph/          # The multi-agent brain (StateGraph + 12 nodes)
 │   ├── ml/                 # Real ML models (XGBoost V2, Isolation Forest)
 │   ├── ingestion/          # CSV → warehouse ETL (real, not mock)
-│   ├── rag/                # ChromaDB + hybrid keyword/semantic retrieval
-│   ├── app/                # FastAPI backend + Chainlit UI
+│   ├── rag/                # ChromaDB + ONNX Runtime embedder + hybrid retrieval
+│   ├── app/                # FastAPI backend
 │   ├── executor/           # Read-only warehouse executor (pooled)
 │   ├── llm/                # LLM Router (Gemini 2.0 + Groq fallback)
 │   └── utils/              # Config, DB engine, logger
+├── retail-ai-frontend/     # Next.js chat UI (deployed separately on Vercel)
 ├── sql/                    # Schema, seeds, 15 analytics views, feature tables
 ├── assets/                 # 24 schema YAMLs, 13 metric defs, 7 business rules
 ├── knowledge_base/         # Markdown findings (the RAG knowledge layer)
 ├── docker/                 # Dockerfile + docker-compose (app + postgres)
-├── tests/                  # Router test, eval harness, integration tests
+├── tests/                  # Router test, RAGAS eval harness, integration tests
 ├── .github/workflows/      # CI: lint + import validation + router test
 └── requirements.txt
 ```
@@ -225,6 +261,9 @@ Most RAG systems dump retrieved documents into a prompt and hope. This system en
 - **Layer 4 — Verification:** Factual claims cross-checked against live data. Warehouse wins on conflict.
 - **Layer 5 — Critique:** Final answer scored 0.0–1.0. Below 0.7 = retry.
 
+### Evaluation (RAGAS)
+`tests/eval_ragas.py` scores the RAG pipeline against a small golden dataset using context precision, context recall, and faithfulness metrics — not just spot-checking answers by eye.
+
 ### MLOps
 - XGBoost training logs parameters, metrics (MAE, RMSE, R², baseline comparison), and model artifacts to **MLflow Tracking**.
 - Model registered in **MLflow Model Registry** with versioning.
@@ -233,15 +272,17 @@ Most RAG systems dump retrieved documents into a prompt and hope. This system en
 ### CI/CD
 - GitHub Actions runs on every PR/push: Ruff lint → import validation → router unit test.
 - Router test uses GitHub Secrets for the Groq API key; fails gracefully (non-blocking) if secret missing.
+- API and frontend deployments to Azure App Service and Vercel are currently manual, not yet part of the CI pipeline.
 
 ### Honest Limitations
 - **Groq free tier** throttles rapid bursts; mitigated by LLM Router (Gemini primary, Groq fallback) + exponential backoff.
 - **Forecast model** underpredicts rare extreme spike days (like Dec 9) — documented honestly in the metrics JSON, not hidden.
 - **ChromaDB** has no partitioning (174 assets = brute-force search is instant; partitioning would add complexity for zero gain at this scale).
+- **Cold starts:** the free/low tiers behind the live demo (API and/or database) may introduce a noticeable delay on the first request after a period of inactivity.
 
 ---
 
-## 🎓 What I Learned 
+## 🎓 What I Learned
 
 **Q: Why LangGraph instead of a simple chain?**
 A chain is linear. This system needs conditional branching (route by intent), retry loops (validation failure, critic failure), and parallel tool dispatch (SQL vs forecast vs anomaly). LangGraph's StateGraph expresses that control flow cleanly. A chain would force it into spaghetti.
@@ -254,6 +295,9 @@ RAG retrieves everything. Context engineering decides what survives (compressor)
 
 **Q: Why no Airflow?**
 For a single pipeline, Airflow is overhead. My `src.pipeline` CLI handles orchestration with retries already built into LangGraph. Airflow shines when you have dozens of pipelines across teams — not here.
+
+**Q: Why did the embedding pipeline change so many times?**
+Started with local sentence-transformers (torch-based), hit memory limits on a constrained deployment tier, tried routing embeddings through the Gemini and HuggingFace APIs instead, then settled on a self-contained ONNX Runtime session — no external API dependency, no PyTorch, and a Docker image roughly 81% smaller as a direct result.
 
 ---
 
