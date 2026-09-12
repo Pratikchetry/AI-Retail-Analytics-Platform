@@ -10,7 +10,7 @@
 
 | | |
 |---|---|
-| **Chat UI** | [ai-retail-analytics-platform.vercel.app](https://ai-retail-analytics-platform.vercel.app) — Next.js frontend, deployed on Vercel |
+| **Chat UI** | [ai-retail-analytics-platform.vercel.app](https://ai-retail-analytics-platform-green.vercel.app/) — Next.js frontend, deployed on Vercel |
 | **API** | Deployed on Azure App Service — confirmed reachable (`200 OK`, ~3.6s response) |
 | **Database** | PostgreSQL hosted on [Neon](https://neon.tech) — production traffic verified against direct query (see below) |
 
