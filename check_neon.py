@@ -1,6 +1,10 @@
+import os
 import psycopg2
+from dotenv import load_dotenv
 
-conn = psycopg2.connect("postgresql://neondb_owner:npg_2pfHFcloB7Mr@ep-rapid-thunder-azkzd3yt-pooler.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require")
+load_dotenv()
+
+conn = psycopg2.connect(os.environ["DATABASE_URL"])
 cur = conn.cursor()
 
 cur.execute("SELECT COUNT(*) FROM fact_sales;")
