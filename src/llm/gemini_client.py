@@ -10,7 +10,7 @@ class GeminiClient:
     def __init__(self):
         self.api_key = os.getenv("GEMINI_API_KEY")
         # Using the latest stable flash model available in your account
-        self.model = "gemini-flash-latest"
+        self.model = "gemini-3.6-flash"
         self.api_url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent?key={self.api_key}"
         log.info("GeminiClient initialized using direct REST API.")
         
