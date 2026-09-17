@@ -22,7 +22,7 @@ That's the product this repository builds: a chat interface in front of a real m
 
 | | |
 |---|---|
-| **Chat UI** | [ai-retail-analytics-platform.vercel.app](https://ai-retail-analytics-platform.vercel.app) — Next.js frontend on Vercel |
+| **Chat UI** | [ai-retail-analytics-platform.vercel.app](https://ai-retail-analytics-platform-green.vercel.app/) — Next.js frontend on Vercel |
 | **API** | FastAPI backend, containerized, deployed on Azure App Service |
 | **Database** | PostgreSQL on [Neon](https://neon.tech) — serverless, verified in production |
 
