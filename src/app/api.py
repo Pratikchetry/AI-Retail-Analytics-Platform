@@ -7,7 +7,6 @@ import os
 import json
 import asyncio
 import hashlib
-import importlib
 import time as _time
 from typing import List
 
@@ -15,14 +14,8 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+from sqlalchemy import text
 import pandas as pd
-
-try:
-    text = importlib.import_module("sqlalchemy").text
-except Exception:
-    def text(statement: str):
-        """Fallback when SQLAlchemy is unavailable in an editor/runtime environment."""
-        return statement
 
 from src.utils.db import engine
 from src.utils.logger import get_logger
@@ -49,9 +42,9 @@ app.add_middleware(
 )
 
 # ------------------------------------------------------------------
-# Root route for Azure Health Ping
+# Root route for Azure Health Ping (Accepts GET and HEAD)
 # ------------------------------------------------------------------
-@app.get("/")
+@app.api_route("/", methods=["GET", "HEAD"])
 def read_root():
     """Azure App Service pings this route to check if the container is alive."""
     return {"status": "ok", "message": "Retail Intelligence API is running"}
@@ -243,11 +236,11 @@ def ingest(req: IngestRequest):
 
 
 # ------------------------------------------------------------------
-# GET /health
+# GET & HEAD /health
 # ------------------------------------------------------------------
-@app.get("/health", response_model=HealthResponse)
+@app.api_route("/health", methods=["GET", "HEAD"])
 def health():
-    """Service + dependency health check."""
+    """Service + dependency health check (supports HEAD for UptimeRobot)."""
     db_status = "disconnected"
     model_loaded = os.path.exists("src/ml/models/forecast_xgb_v2.pkl")
     chroma_assets = None
