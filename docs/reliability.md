@@ -68,7 +68,12 @@ The critic retry loop is a real, measured trade-off: when the critic scores an a
 
 ## 6. Not yet done, stated plainly (no fabrication)
 
-- **RAM usage**: never measured. Only Docker *image size* (14.4GB → 2.75GB) has been measured — this is disk footprint, not runtime memory, and the two should not be conflated.
+- **RAM usage**: measured via Azure's "Memory working set" metric (real, Azure-reported container memory, not an estimate):
+  - 24-hour average: **162.8MB**
+  - 7-day average: **209.5MB**
+  - Peak immediately after a deploy/restart: **~700–800MB** (likely ONNX model + ChromaDB loading into memory on startup)
+  - Idle troughs: **near 0–200MB** between activity bursts — consistent with the Free tier idle-unloading the container between requests, which also matches the UptimeRobot findings above.
+  - Note: this is a still a short observation window dominated by an unusually high number of redeploys during active debugging (visible as the repeated spike pattern in the 7-day chart) — not a clean "normal operation" baseline. A longer, quieter observation period would give a more representative steady-state number.
 - **Statistically robust latency benchmark**: current numbers are from single-digit sample sizes. A proper benchmark would need dozens of runs per question across different times of day.
 - **Human-in-the-Loop (HITL) pipeline**: does not exist in this codebase. Not started.
 - **Root cause of slow Neon SQL execution**: identified as a bottleneck, not yet investigated further.
