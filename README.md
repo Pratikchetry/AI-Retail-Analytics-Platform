@@ -49,6 +49,9 @@
 **Frontend:** Next.js (App Router) + Tailwind CSS + Framer Motion, streaming responses token-by-token via the Fetch/ReadableStream API
 
 ---
+---
+
+---
 
 ## 📖 The Story (What This Actually Does)
 
