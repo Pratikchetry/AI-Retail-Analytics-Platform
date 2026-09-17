@@ -332,3 +332,40 @@ def segment_revenue():
     except Exception as e:
         log.error("/custom/segment-revenue failed: %s", str(e)[:300])
         raise HTTPException(status_code=500, detail=str(e)[:300])
+
+# ------------------------------------------------------------------
+# HITL review queue endpoints
+# ------------------------------------------------------------------
+from pydantic import BaseModel as _BaseModel
+
+
+class ResolveReviewRequest(_BaseModel):
+    reviewer_notes: str
+    corrected_answer: str | None = None
+
+
+@app.get("/review/pending")
+def review_pending(limit: int = 50):
+    """List answers flagged for human review (low critic score, retries exhausted)."""
+    try:
+        from src.hitl.review_queue import get_pending_reviews
+        return get_pending_reviews(limit=limit)
+    except Exception as e:
+        log.error("/review/pending failed: %s", str(e)[:300])
+        raise HTTPException(status_code=500, detail=str(e)[:300])
+
+
+@app.post("/review/{review_id}/resolve")
+def review_resolve(review_id: int, req: ResolveReviewRequest):
+    """Mark a flagged answer as reviewed, with notes and an optional correction."""
+    try:
+        from src.hitl.review_queue import resolve_review
+        found = resolve_review(review_id, req.reviewer_notes, req.corrected_answer)
+        if not found:
+            raise HTTPException(status_code=404, detail=f"Review {review_id} not found")
+        return {"status": "resolved", "id": review_id}
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error("/review/resolve failed: %s", str(e)[:300])
+        raise HTTPException(status_code=500, detail=str(e)[:300])

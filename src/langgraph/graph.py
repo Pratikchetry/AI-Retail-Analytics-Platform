@@ -152,4 +152,12 @@ def run_agent(question: str) -> dict:
     log.info("Running agent for: '%s'", question[:60])
     result = graph.invoke({"question": question})
     log.info("Agent complete | critic_score=%.2f", result.get("critic_score", 0))
+
+    # HITL: if the retry budget was exhausted and the critic still didn't
+    # pass, flag this for human review instead of silently returning a
+    # low-confidence answer with no distinction from a passing one.
+    if not result.get("critic_passes", True):
+        from src.hitl.review_queue import flag_for_review
+        flag_for_review(question, result)
+
     return result
