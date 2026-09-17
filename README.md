@@ -50,6 +50,9 @@
 
 ---
 ---
+## 🏗️ Architecture
+
+<img width="4742" height="6747" alt="diagram" src="https://github.com/user-attachments/assets/1934a8c3-58c0-4264-9629-49979609fb61" />
 
 ---
 
