@@ -94,6 +94,12 @@ SQL Chain  Forecast Node  Anomaly Node   Decline
                                        +------------+  silently returned as
                                                         if it were confident
 ```
+```
+## 🏗️ Architecture — Diagram
+
+<img width="4983" height="6420" alt="diagram (1)" src="https://github.com/user-attachments/assets/1100c157-e206-4aff-98d1-011fc06072a5" />
+
+```
 
 **LLM layer, and the resilience actually built into it:**
 
