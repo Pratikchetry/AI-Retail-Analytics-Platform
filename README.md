@@ -1,8 +1,20 @@
 # 🛍️ Retail Revenue Intelligence Platform
 
-**An end-to-end, multi-agent AI copilot that answers natural-language questions about a UK retail business — reasoning over a live PostgreSQL warehouse, forecasting revenue with XGBoost, and verifying its own answers against ground-truth data.**
+**An end-to-end, multi-agent AI copilot that answers natural-language questions about a UK retail business — reasoning over a live PostgreSQL warehouse, forecasting revenue with XGBoost, verifying its own answers against ground-truth data, and escalating what it isn't confident about to a human.**
 
-> Not a tutorial project. Not a demo with hardcoded answers. Every metric below traces to real warehouse data or a real trained model — and every claim in this README has been independently re-verified (live HTTP checks, direct database queries, clean `--no-cache` Docker builds) rather than just asserted.
+> Every claim, number, and diagram in this README was independently verified during development — live HTTP checks against the deployed API, direct database queries against production, clean `--no-cache` Docker builds compared side by side, and a real, end-to-end tested Human-in-the-Loop pipeline. Where something wasn't verified, it's labeled as such rather than assumed.
+
+---
+
+## 📖 The Scenario This Was Built For
+
+It's 4 PM. A finance team gets an email: tomorrow morning, the CFO is meeting the sales team and a major client, and needs to walk through last quarter's revenue, flag any anomalies, and show where the business stands.
+
+Normally, that's a scramble — pull the data, write the SQL, build a dashboard, sanity-check the numbers, format it into slides. Two to five hours of work, minimum, the night before a meeting that was supposed to be routine.
+
+Instead, someone shares a link. The finance team opens it, types a question — *"What was the total revenue last month?"* — and gets a real, data-backed answer in seconds. No dashboard to build. No queries to write by hand. They ask a follow-up — *"Which customer segment drove that?"* — and get another grounded answer, with the SQL and evidence behind it if anyone wants to check.
+
+That's the product this repository builds: a chat interface in front of a real multi-agent system that queries a live warehouse, forecasts what's coming, catches anomalies, and — critically — knows when it isn't sure and flags that instead of guessing confidently.
 
 ---
 
@@ -10,22 +22,99 @@
 
 | | |
 |---|---|
-| **Chat UI** | [ai-retail-analytics-platform.vercel.app](https://ai-retail-analytics-platform-green.vercel.app/) — Next.js frontend, deployed on Vercel |
-| **API** | Deployed on Azure App Service — confirmed reachable (`200 OK`, ~3.6s response) |
-| **Database** | PostgreSQL hosted on [Neon](https://neon.tech) — production traffic verified against direct query (see below) |
+| **Chat UI** | [ai-retail-analytics-platform.vercel.app](https://ai-retail-analytics-platform.vercel.app) — Next.js frontend on Vercel |
+| **API** | FastAPI backend, containerized, deployed on Azure App Service |
+| **Database** | PostgreSQL on [Neon](https://neon.tech) — serverless, verified in production |
 
-> First request after idle periods may take longer due to the platform's free-tier cold start — this is a known constraint of the hosting tier, not the application.
+> Hosted on free/low tiers for this portfolio project — see the **Honest Limitations** and **Reliability Findings** sections below for what that means in practice, measured, not assumed.
 
 ---
 
-## 🎯 Why This Project Is Different
+## 🏗️ Architecture — How a Question Actually Travels Through This System
 
-| | |
-|---|---|
-| **1.2M+ rows** of real UK retail transactions processed through a custom ETL pipeline | **12-node LangGraph agent** with routing, context compression, self-verification, and a critic quality gate |
-| **MAE £6,892** XGBoost forecast model (67% better than baseline) — tracked in MLflow | **The agent caught its own data bug**: a knowledge-base claim was wrong, the verifier flagged it, and the warehouse truth won |
-| **77% prompt noise reduction** via context engineering (not just RAG) | **One-command Docker bootstrap** — schema, data, models, embeddings, API, UI |
-| **81% smaller Docker image** (14.4GB → 2.75GB) after replacing PyTorch/sentence-transformers with a local ONNX Runtime inference session for embeddings | |
+```text
+ Browser (Next.js, Vercel)
+       |
+       |  POST /ask  { "question": "..." }
+       v
+ FastAPI (Azure App Service, Docker container)
+       |
+       |  cache check (10-min TTL, MD5 of question)
+       |  --- cache miss ---
+       v
++-------------+
+|   ROUTER    |  LLM call: is this SQL? Forecast? Anomaly? Out of scope?
++------+------+
+       |
+   +---+----+---------------+--------------+
+   |        |               |              |
+   v        v               v              v
+SQL Chain  Forecast Node  Anomaly Node   Decline
+   |       (XGBoost)     (Isolation      (out of
+   |                       Forest)        scope)
+   v
++---------------+
+| RAG RETRIEVE  |  ChromaDB + local ONNX embedder → pull relevant
++-------+-------+  knowledge assets (schema docs, business rules, findings)
+        v
++---------------+
+|  COMPRESSOR   |  Keep top 3 chunks, drop the rest (real measured
++-------+-------+  reduction: ~67–76% of retrieved context, avg ~70%)
+        v
++---------------+      +-----------+
+|  SQL GENERATE |----->| VALIDATE  |--(fail)--> retry (max 3)
++-------+-------+      +-----+-----+
+        |                    |(pass)
+        v                    v
++---------------+      +-----------+
+|  SQL EXECUTE  |----->| REASONING |  SQL result = ground truth
++---------------+      +-----+-----+  (Neon PostgreSQL)
+                             v
+                     +---------------+
+                     |   VERIFIER    |  Cross-checks factual claims
+                     | (warehouse    |  against the live warehouse —
+                     |   wins)       |  warehouse wins on any conflict
+                     +-------+-------+
+                             v
+                     +---------------+
+                     |RECOMMENDATION |  "So what should we do about it"
+                     +-------+-------+
+                             v
+                     +---------------+
+                     |    CRITIC     |  Scores the final answer 0.0–1.0
+                     | (retry <0.7)  |  Retries the whole chain if it fails
+                     +-------+-------+
+                             |
+                  passes ----+---- still fails after 3 attempts
+                     |                        |
+                     v                        v
+                 YOUR ANSWER          +altogether+
+                                       | HITL QUEUE |  Logged to Neon for
+                                       | (Neon)     |  human review — never
+                                       +------------+  silently returned as
+                                                        if it were confident
+```
+
+**LLM layer, and the resilience actually built into it:**
+
+```text
+Every LLM call in the graph above routes through:
+
+  LocalLLM.generate(prompt)
+        |
+        v
+  Groq (openai/gpt-oss-120b)  --- fails? --->  Gemini (gemini-3.6-flash)
+        |                                            |
+        v                                            v
+   3 consecutive failures?                      also fails?
+        |                                            |
+        v                                            v
+  Circuit breaker OPENS                    RuntimeError raised
+  (skip Groq for 60s,                      with BOTH providers'
+   go straight to Gemini)                  errors, for debugging
+```
+
+This fallback and circuit breaker did not exist for most of this project's development — see **"The Fallback That Wasn't"** below for the real debugging story behind it.
 
 ---
 
@@ -41,178 +130,141 @@
 ![Azure](https://img.shields.io/badge/Azure-App_Service-blue)
 ![Docker](https://img.shields.io/badge/Docker-Containerized-blue)
 ![MLflow](https://img.shields.io/badge/MLflow-MLOps-pink)
-![GitHub Actions](https://img.shields.io/badge/CI/CD-GitHub_Actions-black)
 
-**LLM Layer:** Google Gemini 2.0 Flash (primary) + Groq llama-3.3-70b (fallback) via a custom LLM Router
-**Vector Store:** ChromaDB + local ONNX Runtime inference (all-MiniLM-L6-v2) — no PyTorch dependency in production
-**Anomaly Detection:** Isolation Forest (scikit-learn)
-**Frontend:** Next.js (App Router) + Tailwind CSS + Framer Motion, streaming responses token-by-token via the Fetch/ReadableStream API
-
----
----
-## 🏗️ Architecture
-
-<img width="4742" height="6747" alt="diagram" src="https://github.com/user-attachments/assets/1934a8c3-58c0-4264-9629-49979609fb61" />
+**LLM layer:** Groq (`openai/gpt-oss-120b`) primary, Google Gemini (`gemini-3.6-flash`) fallback, via a custom `LocalLLM` router with an in-process circuit breaker.
+**Vector store:** ChromaDB + local ONNX Runtime inference (`all-MiniLM-L6-v2`) — no PyTorch dependency in production.
+**Forecasting:** XGBoost V2 (MAE £6,892, R² 0.67, 67% better than naive baseline).
+**Anomaly detection:** Isolation Forest (scikit-learn) — 144 anomalies flagged, 4.98% of country-days.
+**Frontend:** Next.js (App Router), Tailwind CSS, Framer Motion — streams responses token-by-token via `ReadableStream`.
+**Human-in-the-Loop:** answers that exhaust the critic's retry budget are logged to a dedicated Neon table (`human_review_queue`), reviewable and resolvable via `/review/pending` and `/review/{id}/resolve`.
 
 ---
 
-## 📖 The Story (What This Actually Does)
-
-You're the CEO of a UK gift retailer. You open a chat window and type:
-
-> *"Why did revenue drop last quarter, and what should I do about it?"*
-
-A traditional dashboard can't answer that. This system can. Here's what happens in the ~8 seconds before you get a response:
-
-1. **A router agent classifies your intent** — Is this a SQL lookup? A forecast request? Out of scope (like asking about TikTok ad spend)? It decides before touching the database.
-2. **A RAG retriever pulls relevant context** from 174 business knowledge assets (schema docs, business rules, findings) — then a **context compressor throws away 77% of it**, keeping only the 3 most relevant chunks. Less noise = fewer hallucinations.
-3. **A SQL agent writes real PostgreSQL**, a validator checks it against 7 business rules (no `SELECT *`, never join accounting adjustments unless asked, etc.), and it executes against the live warehouse.
-4. **A reasoning agent synthesizes the answer** using an evidence hierarchy: SQL result is ground truth; knowledge base is supporting context only.
-5. **A metadata verifier cross-checks factual claims against the warehouse.** If the knowledge base says "Product X is the superstar" but the data disagrees, **the warehouse wins** and the answer is corrected automatically.
-6. **A critic scores the final answer 0.0–1.0.** If it's below 0.7, the agent retries. You never see a low-quality answer.
-
-### The Moment That Made This Project Real
-
-During testing, the agent was asked: *"What is the only true Superstar product?"*
-
-The knowledge base confidently said **"CREAM HANGING HEART T-LIGHT HOLDER."**
-
-The verifier queried the warehouse. The real top product was **WHITE HANGING HEART T-LIGHT HOLDER** (£261,169, rank #1 on all three dimensions). The name "CREAM" had been wrong since day one — baked into the project docs by mistake. Nobody noticed because every system before this one trusted the documents blindly.
-
-This system didn't. The verifier flagged the conflict, corrected the answer, and the critic passed it at 1.0.
-
-**That's what context engineering means.** Not just retrieving documents — deciding what to trust.
-
----
-
-## 🏗️ Architecture (Plain English)
-
-```text
-You type a question
-       |
-       v
-+-------------+
-|   ROUTER    |  "Is this SQL? Forecast? Out of scope?"
-+------+------+
-       |
-   +---+----+---------------+--------------+
-   |        |               |              |
-   v        v               v              v
-SQL Chain  Forecast Node  Anomaly Node   Decline
-   |       (XGBoost)    (Isolation      (out of
-   |                      Forest)        scope)
-   v
-+---------------+
-| RAG RETRIEVE  |  Pull 174 knowledge assets
-+-------+-------+
-        v
-+---------------+
-|  COMPRESSOR   |  Keep top 3, drop 77% noise
-+-------+-------+
-        v
-+---------------+      +-----------+
-|  SQL GENERATE |---> | VALIDATE  |--(fail)--> retry (max 3)
-+-------+-------+      +-----+-----+
-        |                    |(pass)
-        v                    v
-+---------------+      +-----------+
-|  SQL EXECUTE  |---> | REASONING |  (SQL = ground truth)
-+---------------+      +-----+-----+
-                             v
-                     +---------------+
-                     |   VERIFIER    |  Cross-check claims vs warehouse
-                     | (warehouse    |  (warehouse wins on conflict)
-                     |   wins)       |
-                     +-------+-------+
-                             v
-                     +---------------+
-                     |RECOMMENDATION |  "So what / do this"
-                     +-------+-------+
-                             v
-                     +---------------+
-                     |    CRITIC     |  Score 0.0-1.0
-                     | (block < 0.7) |  (retry if low)
-                     +-------+-------+
-                             v
-                         YOUR ANSWER
-```
-
-**Why this design (not just "a RAG chatbot"):**
-- **Agents vs. Nodes:** Business logic (SQL generation, validation) lives in reusable `src/agent/` classes. Control flow (routing, retries, critic loops) lives in `src/langgraph/nodes/`. You don't ask the SQL specialist to also manage the company — same principle.
-- **Context engineering > pure RAG:** RAG retrieves everything. Context engineering decides what *survives* (compressor), what *gets trusted* (verifier), and what *wins* on conflict (warehouse). This is why the system has a 100% pass rate on scored eval questions.
-- **No Airflow:** For a single pipeline, Airflow is overhead. The `src.pipeline` CLI + Docker handles orchestration with retry logic already built into LangGraph.
-
----
-
-## 📊 Ground Truth (Verified Numbers)
-
-Every number here comes from the live warehouse or a real model artifact — not estimates.
+## 📊 Ground Truth (Verified Against the Live Warehouse)
 
 | Metric | Value |
 |---|---|
 | Total Revenue (all time) | **£20,476,634** |
 | Fact Sales Rows | **1,007,914** |
-| Customers / Products / Countries | 5,879 / 4,917 / 43 |
 | Best Month | November 2011 (£1,503,867) |
-| YoY Growth | −0.13% (Dec 2011 partial-month artifact, not real decline) |
-| True Superstar Product | **WHITE HANGING HEART T-LIGHT HOLDER** (£261,169, rank #1 on revenue + quantity + orders) |
+| True Superstar Product | **WHITE HANGING HEART T-LIGHT HOLDER** (£261,169, rank #1 on revenue, quantity, and orders) |
 | Forecast Model (XGBoost V2) | **MAE £6,892 · R² 0.67 · 67% better than naive baseline** |
-| Anomalies Detected | **144** (4.98% of country-days, including the famous Dec 9 £196K spike) |
-| 30-Day Forecast Total | £2,195,974 (avg £73,199/day) |
-| LLM Calls Per Question | **5** (optimized down from 9 via graph deduplication) |
-| Context Noise Reduction | **77%** (via context compressor) |
-| Eval Pass Rate | **5/5 = 100%** on scored questions |
-| Docker Image Size | **2.75GB** (down from 14.4GB pre-ONNX; verified via clean `--no-cache` builds of both versions) |
+| Anomalies Detected | **144** (4.98% of country-days) |
+| Context Compression | **~67–76% of retrieved context dropped** (measured across real production log traces) |
+
+### The Bug the System Caught in Itself
+
+Early in this project, the knowledge base confidently stated the top product was **"CREAM HANGING HEART T-LIGHT HOLDER."** The real answer, verified against the warehouse, is **"WHITE HANGING HEART T-LIGHT HOLDER."** The name had been wrong from the start — nobody caught it because nothing before this system's verifier step cross-checked documents against live data. The metadata verifier node caught the contradiction, corrected the answer, and the critic scored it 1.0. That's the entire reason the "warehouse wins on conflict" rule exists in the architecture above — it isn't theoretical, it's a fix for a bug this exact system found in its own knowledge base.
 
 ---
 
-## 🐳 Docker Image Optimization
+## 🐳 Docker Image Optimization — 14.4GB → 2.75GB
 
-The embedding pipeline went through several iterations while debugging memory constraints on a resource-limited deployment (Gemini embedding API → HuggingFace Inference API → local ONNX runtime), landing on a self-contained ONNX-based embedder with no external API dependency and no PyTorch/sentence-transformers requirement.
+The embedding pipeline went through several real iterations while chasing memory constraints on a resource-limited deployment: local `sentence-transformers` (PyTorch-backed) → Gemini embedding API → HuggingFace Inference API → local ONNX Runtime. Each swap was a response to a real production failure (OOM, DNS blocks, API throttling), not a planned optimization roadmap.
 
-Measured by building both versions from the actual git history with `docker build --no-cache`:
+Measured by building both the "before" (`sentence-transformers` + `torch`) and "after" (ONNX Runtime) versions from actual git history with `docker build --no-cache`, so both numbers are real and comparable:
 
 | | Total Image Size | Unique Layers Added |
 |---|---|---|
 | Before (sentence-transformers + torch) | 14.4GB | 4.58GB |
 | After (local ONNX Runtime) | **2.75GB** | **645MB** |
 
-The current production image matches the "after" measurement almost exactly (647MB), confirming the deployed service genuinely runs the ONNX path.
+The production image (647MB) matches the "after" unique-layer measurement almost exactly, confirming the deployed service genuinely runs the ONNX path, not a stale build.
+
+---
+
+## 🔌 The Fallback That Wasn't (A Real Debugging Story)
+
+The README used to claim: *"LLM Router: Gemini primary + Groq fallback."* That claim was false. `LocalLLM` only ever called Groq. `GeminiClient` existed in the codebase, fully written, and was never imported by anything. When Groq rate-limited (which it does, reliably, on the free tier under load), the entire agent request crashed with a raw `500`.
+
+This was caught during a live benchmarking session, not a code review — a RAGAS evaluation run hit Groq's 429 and the whole pipeline died mid-question. Fixing it took four real attempts:
+
+1. Wired `GeminiClient` into `LocalLLM` as an actual fallback, with a circuit breaker (3 consecutive Groq failures → skip Groq entirely for 60s, go straight to Gemini).
+2. First model tried: `gemini-flash-latest` — technically valid, but Google's own docs flag it as experimental with restrictive rate limits. Failed under the same load that broke Groq.
+3. Second attempt: `gemini-2.0-flash` — not available for this API key/project. `404`.
+4. Third attempt: `gemini-2.5-flash` — deprecated for new API keys, per Google's own API error message, which explicitly named the replacement.
+5. Fourth attempt, the one that worked: **`gemini-3.6-flash`** — confirmed via a standalone test, then verified in production logs after redeploy.
+
+Post-fix, two full benchmark runs against production showed **zero application-level 500 crashes**, including on the exact question that had failed 100% of the time before the fix. Full detail, including the real trade-off this surfaced (the system now tries harder and occasionally takes longer, rather than failing fast) is in [`docs/reliability.md`](docs/reliability.md).
+
+---
+
+## 🚨 The "6-Day Outage" That Wasn't
+
+UptimeRobot reported this API as "Down" continuously for over 6 days. The API was never actually down — every real request during that window succeeded. The root cause: UptimeRobot's monitor was configured to send `HEAD` requests, and the FastAPI `/health` route was defined with `@app.get("/health")`, which doesn't handle `HEAD` by default. Every monitoring check got a `405 Method Not Allowed` and was correctly interpreted as "down," even though the actual API was healthy the entire time.
+
+Fixed by changing the route to `@app.api_route("/health", methods=["GET", "HEAD"])` (and the same for `/`). Confirmed resolved: UptimeRobot flipped to "Up" within minutes of the fix deploying.
+
+---
+
+## 🧪 RAGAS Evaluation (Real Scores, Real Caveats)
+
+`tests/eval_ragas.py` runs the actual LangGraph agent against 5 golden-dataset questions and scores the results with RAGAS's context precision, context recall, and faithfulness metrics, using Groq as the judge LLM.
+
+| Metric | Score |
+|---|---|
+| Context Precision | 0.60 |
+| Context Recall | 0.40 |
+| Faithfulness | 0.38 |
+
+**Stated honestly:** this run completed successfully, but a later re-run (after fixing a ground-truth error in the test file itself — it had inherited the same "CREAM" typo the verifier catches at runtime) crashed partway through due to Groq rate-limiting, before the Gemini fallback existed. These numbers are from one completed run with a different underlying model than is currently in production for some nodes, and should be read as a first measurement, not a stable benchmark. A properly repeated run, post-fallback-fix, would be needed to trust these numbers as representative.
+
+---
+
+## 🙋 Human-in-the-Loop — Built, Tested, Deployed
+
+When the critic node exhausts its retry budget (3 attempts) and still scores an answer below 0.7, the old behavior was to return that weak answer to the user with no indication it was low-confidence. Now, it's logged instead:
+
+```
+POST /ask (internally) → critic fails 3x → flag_for_review() →
+  INSERT INTO human_review_queue (question, answer, critic_score, ...)
+```
+
+- `GET /review/pending` — lists flagged answers, most recent first
+- `POST /review/{id}/resolve` — mark reviewed, add notes, optionally supply a corrected answer
+
+This was tested end-to-end before deployment: a fake low-confidence result was inserted directly, confirmed retrievable via the Python module, then confirmed retrievable and resolvable via the actual live HTTP API, then confirmed working against the production Neon database after deploy (`curl .../review/pending` returns real, correct data).
+
+---
+
+## 📈 Reliability & Latency — Measured, Not Assumed
+
+Full detail in [`docs/reliability.md`](docs/reliability.md). Headline numbers:
+
+| Metric | Value | Caveat |
+|---|---|---|
+| Full pipeline latency (p50) | ~18–37s across runs | Small sample size (n=3–5 per run) |
+| Cached response latency (p50) | ~0.9–1.7s | ~10–20x faster than a fresh run |
+| RAM usage (Azure "Memory working set") | 162.8MB (24h avg) / 209.5MB (7-day avg) | Peaks ~700–800MB right after a deploy/restart |
+| Docker image size | 2.75GB (from 14.4GB) | Verified via clean `--no-cache` builds |
+| Largest single latency cost | Groq 429 backoff, up to ~30s per occurrence | Direct consequence of the free tier under load |
 
 ---
 
 ## 🚀 Quickstart
 
-### Option A: Docker (one command — recommended)
+### Option A: Docker (recommended)
 
 ```bash
-# 1. Bootstrap the full stack (schema + 1M rows + models + embeddings)
 docker compose -f docker/docker-compose.yml up --build setup
-
-# 2. Start the product (API + UI + Postgres)
 docker compose -f docker/docker-compose.yml up -d
 ```
 
-Then open:
 - **Chat UI:** http://localhost:8001
 - **API Docs (Swagger):** http://localhost:8000/docs
 
 ### Option B: Local Development
 
 ```bash
-# Setup
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env  # Add GROQ_API_KEY, GEMINI_API_KEY, and DATABASE_URL
+cp .env.example .env  # Add GROQ_API_KEY, GEMINI_API_KEY, DATABASE_URL
 
-# Run the full data + ML pipeline
 PYTHONPATH=. python -m src.pipeline all
-
-# Start API + UI together
 ./run_app.sh
 ```
 
-> In production, `DATABASE_URL` points to a Neon-hosted PostgreSQL instance. For local development, the Docker Compose setup provisions its own local Postgres container instead.
+> `DATABASE_URL` points to Neon in production; local development uses a Docker-provisioned Postgres instance instead.
 
 ---
 
@@ -220,90 +272,27 @@ PYTHONPATH=. python -m src.pipeline all
 
 | Method | Path | Purpose |
 |---|---|---|
-| `POST` | `/ask` | Natural language → full agent response (answer, SQL, evidence, critic score) |
-| `POST` | `/forecast` | Direct XGBoost model access (bypass router) |
+| `POST` | `/ask` | Natural language → full agent response |
+| `POST` | `/chat` | Streaming variant for the Next.js frontend |
+| `POST` | `/forecast` | Direct XGBoost model access |
 | `POST` | `/ingest` | Reload warehouse from staging CSVs |
-| `GET` | `/` | Root health check (used by Azure App Service to confirm the container is alive) |
-| `GET` | `/health` | Service + dependency health check |
-| `GET` | `/metrics` | KPI snapshot from the warehouse |
-| `GET` | `/custom/monthly-revenue` | Monthly revenue time series (chart data) |
+| `GET`/`HEAD` | `/` | Root health check (Azure) |
+| `GET`/`HEAD` | `/health` | Service + dependency health check |
+| `GET` | `/metrics` | KPI snapshot |
+| `GET` | `/custom/monthly-revenue` | Monthly revenue time series |
 | `GET` | `/custom/segment-revenue` | Customer segment breakdown |
+| `GET` | `/review/pending` | List answers flagged for human review |
+| `POST` | `/review/{id}/resolve` | Resolve a flagged answer |
 
 ---
 
-## 🗂️ Project Structure
+## 🎓 Honest Limitations
 
-```
-retail-revenue-intelligence/
-├── src/
-│   ├── agent/              # Reusable capabilities (SQL gen, validation, reasoning)
-│   ├── langgraph/          # The multi-agent brain (StateGraph + 12 nodes)
-│   ├── ml/                 # Real ML models (XGBoost V2, Isolation Forest)
-│   ├── ingestion/          # CSV → warehouse ETL (real, not mock)
-│   ├── rag/                # ChromaDB + ONNX Runtime embedder + hybrid retrieval
-│   ├── app/                # FastAPI backend
-│   ├── executor/           # Read-only warehouse executor (pooled)
-│   ├── llm/                # LLM Router (Gemini 2.0 + Groq fallback)
-│   └── utils/              # Config, DB engine, logger
-├── retail-ai-frontend/     # Next.js chat UI (deployed separately on Vercel)
-├── sql/                    # Schema, seeds, 15 analytics views, feature tables
-├── assets/                 # 24 schema YAMLs, 13 metric defs, 7 business rules
-├── knowledge_base/         # Markdown findings (the RAG knowledge layer)
-├── docker/                 # Dockerfile + docker-compose (app + postgres)
-├── tests/                  # Router test, RAGAS eval harness, integration tests
-├── .github/workflows/      # CI: lint + import validation + router test
-└── requirements.txt
-```
-
----
-
-## 🧪 Quality & Engineering Decisions
-
-### Context Engineering (the differentiator)
-Most RAG systems dump retrieved documents into a prompt and hope. This system enforces a trust hierarchy:
-- **Layer 1 — Routing:** Out-of-scope questions (TikTok, competitors) rejected before touching the warehouse.
-- **Layer 2 — Compression:** Top-3 relevant chunks only; 77% noise dropped.
-- **Layer 3 — Evidence Hierarchy:** SQL result = ground truth. Knowledge base = context only.
-- **Layer 4 — Verification:** Factual claims cross-checked against live data. Warehouse wins on conflict.
-- **Layer 5 — Critique:** Final answer scored 0.0–1.0. Below 0.7 = retry.
-
-### Evaluation (RAGAS)
-`tests/eval_ragas.py` scores the RAG pipeline against a small golden dataset using context precision, context recall, and faithfulness metrics — not just spot-checking answers by eye.
-
-### MLOps
-- XGBoost training logs parameters, metrics (MAE, RMSE, R², baseline comparison), and model artifacts to **MLflow Tracking**.
-- Model registered in **MLflow Model Registry** with versioning.
-- Local `.pkl` artifact also saved for the LangGraph forecast node to load at inference time.
-
-### CI/CD
-- GitHub Actions runs on every PR/push: Ruff lint → import validation → router unit test.
-- Router test uses GitHub Secrets for the Groq API key; fails gracefully (non-blocking) if secret missing.
-- API and frontend deployments to Azure App Service and Vercel are currently manual, not yet part of the CI pipeline.
-
-### Honest Limitations
-- **Groq free tier** throttles rapid bursts; mitigated by LLM Router (Gemini primary, Groq fallback) + exponential backoff.
-- **Forecast model** underpredicts rare extreme spike days (like Dec 9) — documented honestly in the metrics JSON, not hidden.
-- **ChromaDB** has no partitioning (174 assets = brute-force search is instant; partitioning would add complexity for zero gain at this scale).
-- **Cold starts:** the free/low tiers behind the live demo (API and/or database) may introduce a noticeable delay on the first request after a period of inactivity.
-
----
-
-## 🎓 What I Learned
-
-**Q: Why LangGraph instead of a simple chain?**
-A chain is linear. This system needs conditional branching (route by intent), retry loops (validation failure, critic failure), and parallel tool dispatch (SQL vs forecast vs anomaly). LangGraph's StateGraph expresses that control flow cleanly. A chain would force it into spaghetti.
-
-**Q: Why separate `src/agent/` and `src/langgraph/nodes/`?**
-Agents contain business logic (the SQL prompt, the validation rules). Nodes contain control flow (when to retry, what state to write). Separating them means I can unit-test "does this SQL agent generate valid SQL?" without spinning up the whole graph. Same pattern as LangChain tools + agent loop.
-
-**Q: What's context engineering and why does it matter?**
-RAG retrieves everything. Context engineering decides what survives (compressor), what gets trusted (verifier), and what wins on conflict (warehouse). It's the difference between a system that hallucinates confidently and one that caught its own data bug.
-
-**Q: Why no Airflow?**
-For a single pipeline, Airflow is overhead. My `src.pipeline` CLI handles orchestration with retries already built into LangGraph. Airflow shines when you have dozens of pipelines across teams — not here.
-
-**Q: Why did the embedding pipeline change so many times?**
-Started with local sentence-transformers (torch-based), hit memory limits on a constrained deployment tier, tried routing embeddings through the Gemini and HuggingFace APIs instead, then settled on a self-contained ONNX Runtime session — no external API dependency, no PyTorch, and a Docker image roughly 81% smaller as a direct result.
+- **Groq free tier** throttles under load — mitigated by the Gemini fallback and circuit breaker, but not eliminated; the trade-off is documented in `reliability.md`, not hidden.
+- **Azure Free tier** has a hard daily CPU quota and idles the container between requests — RAM troughs near 0MB in the metrics reflect this.
+- **RAGAS scores** are a single, unrepeated measurement — stated plainly above, not smoothed over.
+- **SQL execution against Neon** occasionally takes 4.7–7s for simple queries — flagged as an open, unsolved bottleneck.
+- **No distributed circuit breaker** — the Groq/Gemini breaker is per-process; a multi-instance deployment would need shared state (e.g., Redis) for the same protection.
 
 ---
 
@@ -313,4 +302,4 @@ MIT
 
 ---
 
-> *Built from scratch — real data, real models, real architecture decisions. No tutorial copies, no hardcoded answers.*
+> *Built from scratch, debugged in production, and documented honestly — including the bugs that were found and the ones that are still open.*
